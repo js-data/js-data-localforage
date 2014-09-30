@@ -5,9 +5,9 @@
   <title></title>
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular.min.js"></script>
-  <script src="https://github.com/js-data/js-data/releases/download/0.0.1/js-data-0.0.1.min.js"></script>
+  <script src="https://github.com/js-data/js-data/releases/download/0.4.-/js-data-0.4.0.min.js"></script>
   <script
-    src="https://github.com/js-data/js-data-localforage/releases/download/0.1.0/js-data-localforage-0.1.0.min.js"></script>
+    src="https://github.com/js-data/js-data-localforage/releases/download/0.4.0/js-data-localforage-0.4.0.min.js"></script>
   <script src="./example.js"></script>
 </head>
 <body data-ng-controller="localforageCtrl as lsCtrl">
@@ -42,13 +42,12 @@
   </div>
   <div>
 <pre><code>
-var dsLocalForageAdapter = new DSLocalForageAdapter();
+var adapter = new DSLocalForageAdapter();
 
-var datastore = new JSData.DS();
-datastore.defaults.defaultAdapter = 'dsLocalForageAdapter';
-datastore.adapters.dsLocalForageAdapter = dsLocalForageAdapter;
+var store = new JSData.DS();
+store.registerAdapter('localforage', adapter, { default: true });
 
-var User = datastore.defineResource('user');
+var User = store.defineResource('user');
 
 angular.module('localforage-example', [])
   .controller('localforageCtrl', function ($scope, $timeout) {

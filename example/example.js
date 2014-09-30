@@ -1,8 +1,8 @@
 (function () {
-  var dsLocalForageAdapter = new DSLocalForageAdapter();
+  var adapter = new DSLocalForageAdapter();
 
   var store = new JSData.DS();
-  store.registerAdapter('DSLocalForageAdapter', dsLocalForageAdapter, { default: true });
+  store.registerAdapter('localforage', adapter, { default: true });
 
   var User = store.defineResource('user');
 

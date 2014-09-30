@@ -32,7 +32,7 @@ Load `js-data-localforage.js` after `js-data.js`.
 var adapter = new DSLocalForageAdapter();
 
 var store = new JSData.DS();
-store.registerAdapter('DSLocalForageAdapter', adapter, { default: true });
+store.registerAdapter('localforage', adapter, { default: true });
 
 // "store" will now use the localforage adapter for all async operations
 ```
