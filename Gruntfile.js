@@ -78,6 +78,7 @@ module.exports = function (grunt) {
         browsers: ['Firefox', 'PhantomJS'],
         options: {
           files: [
+            'bower_components/localforage/dist/localforage.js',
             'bower_components/js-data/dist/js-data.min.js',
             'dist/js-data-localforage.min.js',
             'karma.start.js',
