@@ -31,6 +31,6 @@
   ],
   "dependencies": {
     "js-data": "~0.4.x",
-    "localforage": "~0.9.x"
+    "localforage": "~0.9.3"
   }
 }
