@@ -5,7 +5,7 @@
       store.registerAdapter('localforage', new DSLocalForageAdapter(), { default: true });
       return store;
     })
-    .factory('User', function () {
+    .factory('User', function (store) {
       return store.defineResource('user');
     })
     .controller('localforageCtrl', function ($scope, $timeout, User) {

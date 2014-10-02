@@ -43,14 +43,15 @@
   </div>
   <div>
 <pre><code>
-var adapter = new DSLocalForageAdapter();
-
-var store = new JSData.DS();
-store.registerAdapter('localforage', adapter, { default: true });
-
-var User = store.defineResource('user');
-
 angular.module('localforage-example', [])
+  .factory('store', function () {
+    var store = new JSData.DS();
+    store.registerAdapter('localforage', new DSLocalForageAdapter(), { default: true });
+    return store;
+  })
+  .factory('User', function (store) {
+    return store.defineResource('user');
+  })
   .controller('localforageCtrl', function ($scope, $timeout) {
     $scope.add = function (user) {
       $scope.creating = true;
