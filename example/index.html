@@ -5,12 +5,12 @@
   <title></title>
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular.min.js"></script>
-  <script src="https://github.com/js-data/js-data/releases/download/0.4.-/js-data-0.4.0.min.js"></script>
+  <script src="https://github.com/js-data/js-data/releases/download/0.4.1-/js-data-0.4.1.min.js"></script>
   <script
-    src="https://github.com/js-data/js-data-localforage/releases/download/0.4.0/js-data-localforage-0.4.0.min.js"></script>
+    src="https://github.com/js-data/js-data-localforage/releases/download/0.4.1/js-data-localforage-0.4.1.min.js"></script>
   <script src="./example.js"></script>
 </head>
-<body data-ng-controller="localforageCtrl as lsCtrl">
+<body data-ng-controller="localforageCtrl as lfCtrl">
 <div class="container" style="margin-top: 100px">
   <div class="col-sm-6">
     <h1 class="page-header">js-data localforage example</h1>
@@ -30,9 +30,9 @@
           {{ user.id }}: {{ user.name }}
         </div>
         <div class="list-group-item">
-          <form id="user-form" name="user-form" data-ng-submit="add({ name: lsCtrl.name })">
+          <form id="user-form" name="user-form" data-ng-submit="add({ name: lfCtrl.name })">
 
-            <input class="form-control" type="text" data-ng-model= lsCtrl.name" id="name" name="name"
+            <input class="form-control" type="text" data-ng-model="lfCtrl.name" id="name" name="name"
                    placeholder="Enter a name and press enter" data-ng-disabled="creating"/>
             <input type="submit" class="hidden"/>
           </form>

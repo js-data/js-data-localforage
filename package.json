@@ -1,7 +1,7 @@
 {
   "name": "js-data-localforage",
   "description": "localStorage adapter for js-data.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "homepage": "http://www.js-data.io/js-data-localforage",
   "repository": {
     "type": "git",
@@ -17,6 +17,7 @@
       "url": "https://github.com/js-data/js-data-localforage/blob/master/LICENSE"
     }
   ],
+  "main": "./src/index.js",
   "keywords": [
     "data",
     "datastore",
@@ -52,11 +53,9 @@
   "scripts": {
     "test": "grunt test"
   },
-  "peerDependencies": {
+  "dependencies": {
+    "mout": "0.10.0",
     "js-data": "~0.4.x",
     "localforage": "~0.9.x"
-  },
-  "dependencies": {
-    "mout": "0.10.0"
   }
 }

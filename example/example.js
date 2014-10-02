@@ -1,22 +1,31 @@
 (function () {
-  var adapter = new DSLocalForageAdapter();
-
-  var store = new JSData.DS();
-  store.registerAdapter('localforage', adapter, { default: true });
-
-  var User = store.defineResource('user');
-
   angular.module('localforage-example', [])
-    .controller('localforageCtrl', function ($scope, $timeout) {
+    .factory('store', function () {
+      var store = new JSData.DS();
+      store.registerAdapter('localforage', new DSLocalForageAdapter(), { default: true });
+      return store;
+    })
+    .factory('User', function () {
+      return store.defineResource('user');
+    })
+    .controller('localforageCtrl', function ($scope, $timeout, User) {
+      var lfCtrl = this;
+
+      User.findAll().then(function () {
+        $scope.$apply();
+      });
+
       $scope.add = function (user) {
         $scope.creating = true;
         User.create(user).then(function () {
           $scope.creating = false;
+          lfCtrl.name = '';
           $timeout();
         }, function () {
           $scope.creating = false;
         });
       };
+
       $scope.remove = function (user) {
         $scope.destroying = user.id;
         User.destroy(user.id).then(function () {
@@ -26,6 +35,7 @@
           delete $scope.destroying;
         });
       };
+
       $scope.$watch(function () {
         return User.lastModified();
       }, function () {

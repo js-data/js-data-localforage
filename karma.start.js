@@ -35,10 +35,17 @@ var TYPES_EXCEPT_FUNCTION = ['string', 123, 123.123, null, undefined, {}, [], tr
 beforeEach(function (done) {
   localforage.clear(function () {
     var JSData;
-    if (!window && typeof module !== 'undefined' && module.exports) {
+
+    try {
       JSData = require('js-data');
-    } else {
-      JSData = window.JSData;
+    } catch (e) {
+    }
+
+    if (!JSData) {
+      try {
+        JSData = window.JSData;
+      } catch (e) {
+      }
     }
 
     datastore = new JSData.DS();

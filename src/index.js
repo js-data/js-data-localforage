@@ -1,8 +1,21 @@
 var JSData;
-if (!window && typeof module !== 'undefined' && module.exports) {
+
+try {
   JSData = require('js-data');
-} else {
-  JSData = window.JSData;
+} catch (e) {
+}
+
+if (!JSData) {
+  try {
+    JSData = window.JSData;
+  } catch (e) {
+  }
+}
+
+if (!JSData) {
+  throw new Error('js-data must be loaded!');
+} else if (!localforage) {
+  throw new Error('localforage must be loaded!');
 }
 
 var emptyStore = new JSData.DS();
