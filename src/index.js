@@ -52,12 +52,20 @@ dsLocalStorageAdapterPrototype.getIdPath = function (resourceConfig, options, id
 
 dsLocalStorageAdapterPrototype.getIds = function (resourceConfig, options) {
   var idsPath = this.getPath(resourceConfig, options);
-  return new P(function (resolve) {
-    localforage.getItem(idsPath, function (ids) {
-      if (ids) {
+  return new P(function (resolve, reject) {
+    localforage.getItem(idsPath, function (err, ids) {
+      if (err) {
+        return reject(err);
+      } else if (ids) {
         return resolve(ids);
       } else {
-        return localforage.setItem(idsPath, {}, resolve);
+        return localforage.setItem(idsPath, {}, function (err, v) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(v);
+          }
+        });
       }
     });
   });
@@ -65,8 +73,14 @@ dsLocalStorageAdapterPrototype.getIds = function (resourceConfig, options) {
 
 dsLocalStorageAdapterPrototype.saveKeys = function (ids, resourceConfig, options) {
   var keysPath = this.getPath(resourceConfig, options);
-  return new P(function (resolve) {
-    localforage.setItem(keysPath, ids, resolve);
+  return new P(function (resolve, reject) {
+    localforage.setItem(keysPath, ids, function (err, v) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(v);
+      }
+    });
   });
 };
 
@@ -87,8 +101,14 @@ dsLocalStorageAdapterPrototype.removeId = function (id, resourceConfig, options)
 };
 
 dsLocalStorageAdapterPrototype.GET = function (key) {
-  return new P(function (resolve) {
-    localforage.getItem(key, resolve);
+  return new P(function (resolve, reject) {
+    localforage.getItem(key, function (err, v) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(v);
+      }
+    });
   });
 };
 
@@ -97,8 +117,14 @@ dsLocalStorageAdapterPrototype.PUT = function (key, value) {
     if (item) {
       deepMixIn(item, value);
     }
-    return new P(function (resolve) {
-      localforage.setItem(key, item || value, resolve);
+    return new P(function (resolve, reject) {
+      localforage.setItem(key, item || value, function (err, v) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(v);
+        }
+      });
     });
   });
 };
@@ -130,9 +156,7 @@ dsLocalStorageAdapterPrototype.findAll = function (resourceConfig, params, optio
     }
     var tasks = [];
     forEach(idsArray, function (id) {
-      tasks.push(new P(function (resolve) {
-        localforage.getItem(_this.getIdPath(resourceConfig, options, id), resolve);
-      }));
+      tasks.push(_this.GET(_this.getIdPath(resourceConfig, options, id)));
     });
     return P.all(tasks);
   }).then(function (items) {

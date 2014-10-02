@@ -22,9 +22,9 @@ localStorage adapter for [js-data](http://www.js-data.io/js-data).
 | Coverage | [![Coverage Status](https://coveralls.io/repos/js-data/js-data-localforage/badge.png?branch=master)](https://coveralls.io/r/js-data/js-data-localforage?branch=master) |
 
 ## Quick Start
-`bower install --save js-data js-data-localforage` or `npm install --save js-data js-data-localforage`.
+`bower install --save localforage js-data js-data-localforage` or `npm install --save localforage js-data js-data-localforage`.
 
-Load Mozilla's `localforage.js`.
+Load Mozilla's `localforage.nopromises.js`.
 
 Load `js-data-localforage.js` after `js-data.js`.
 

@@ -75,10 +75,10 @@ module.exports = function (grunt) {
         preprocessors: {}
       },
       min: {
-        browsers: ['Firefox', 'PhantomJS'],
+        browsers: ['Firefox'],
         options: {
           files: [
-            'bower_components/localforage/dist/localforage.js',
+            'bower_components/localforage/dist/localforage.nopromises.js',
             'bower_components/js-data/dist/js-data.min.js',
             'dist/js-data-localforage.min.js',
             'karma.start.js',
@@ -87,7 +87,7 @@ module.exports = function (grunt) {
         }
       },
       ci: {
-        browsers: ['Firefox', 'PhantomJS']
+        browsers: ['Firefox']
       }
     },
     coveralls: {

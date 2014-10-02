@@ -20,7 +20,7 @@ module.exports = function (config) {
 
 		// list of files / patterns to load in the browser
 		files: [
-			'bower_components/localforage/dist/localforage.js',
+			'bower_components/localforage/dist/localforage.nopromises.js',
 			'bower_components/js-data/dist/js-data.js',
 			'dist/js-data-localforage.js',
 			'karma.start.js',
