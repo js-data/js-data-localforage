@@ -1,6 +1,6 @@
 {
   "name": "js-data-localforage",
-  "description": "localStorage adapter for js-data.",
+  "description": "localforage adapter for js-data.",
   "version": "0.4.2",
   "homepage": "http://www.js-data.io/js-data-localforage",
   "repository": {
@@ -24,7 +24,10 @@
     "store",
     "database",
     "adapter",
-    "localstorage"
+    "localstorage",
+    "localforage",
+    "websql",
+    "indexeddb"
   ],
   "devDependencies": {
     "grunt": "0.4.5",

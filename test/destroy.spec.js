@@ -1,5 +1,5 @@
 describe('dsLocalForageAdapter#destroy', function () {
-  it('should destroy a user from localStorage', function (done) {
+  it('should destroy a user from localForage', function (done) {
     var id;
     dsLocalForageAdapter.create(User, { name: 'John' })
       .then(function (user) {

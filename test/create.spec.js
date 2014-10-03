@@ -1,5 +1,5 @@
 describe('dsLocalForageAdapter#create', function () {
-  it('should create a user in localStorage', function (done) {
+  it('should create a user in localForage', function (done) {
     var id;
     dsLocalForageAdapter.create(User, { name: 'John' }).then(function (user) {
       id = user.id;

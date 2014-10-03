@@ -2,7 +2,7 @@
 
 ## js-data-localforage
 
-localStorage adapter for [js-data](http://www.js-data.io/js-data).
+localforage adapter for [js-data](http://www.js-data.io/js-data).
 
 ## API Documentation
 [DSLocalForageAdapter](https://github.com/js-data/js-data/wiki/DSLocalForageAdapter)
