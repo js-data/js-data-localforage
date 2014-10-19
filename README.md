@@ -2,10 +2,10 @@
 
 ## js-data-localforage
 
-localforage adapter for [js-data](http://www.js-data.io/js-data).
+localforage adapter for [js-data](http://www.js-data.io/).
 
 ## API Documentation
-[DSLocalForageAdapter](https://github.com/js-data/js-data/wiki/DSLocalForageAdapter)
+[DSLocalForageAdapter](http://www.js-data.io/docs/dslocalforageadapter)
 
 ## Demo
 [https://js-data-localforage.firebaseapp.com/](https://js-data-localforage.firebaseapp.com/)
@@ -32,7 +32,7 @@ Load `js-data-localforage.js` after `js-data.js`.
 var adapter = new DSLocalForageAdapter();
 
 var store = new JSData.DS();
-store.registerAdapter('localforage', adapter, { default: true });
+store.registerAdapter('lf', adapter, { default: true });
 
 // "store" will now use the localforage adapter for all async operations
 ```
