@@ -1,7 +1,7 @@
 /**
 * @author Jason Dobry <jason.dobry@gmail.com>
 * @file js-data-localforage.js
-* @version 1.0.0-alpha.2 - Homepage <http://www.js-data.iojs-data-localforage/>
+* @version 1.0.0-alpha.3 - Homepage <http://www.js-data.iojs-data-localforage/>
 * @copyright (c) 2014 Jason Dobry 
 * @license MIT <https://github.com/js-data/js-data-localforage/blob/master/LICENSE>
 *
