@@ -1,3 +1,9 @@
+##### 1.0.0-alpha.1 - 31 October 2014
+
+Updated dependencies
+
+Stable Version 1.0.0-alpha.1
+
 ##### 0.4.1 - 01 October 2014
 
 ###### Other

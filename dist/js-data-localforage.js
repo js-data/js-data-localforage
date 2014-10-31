@@ -1,7 +1,7 @@
 /**
 * @author Jason Dobry <jason.dobry@gmail.com>
 * @file js-data-localforage.js
-* @version 0.4.2 - Homepage <http://www.js-data.iojs-data-localforage/>
+* @version 1.0.0-alpha.2 - Homepage <http://www.js-data.iojs-data-localforage/>
 * @copyright (c) 2014 Jason Dobry 
 * @license MIT <https://github.com/js-data/js-data-localforage/blob/master/LICENSE>
 *
@@ -361,17 +361,17 @@ function DSLocalForageAdapter(options) {
   deepMixIn(this.defaults, options);
 }
 
-var dsLocalStorageAdapterPrototype = DSLocalForageAdapter.prototype;
+var dsLocalForageAdapterPrototype = DSLocalForageAdapter.prototype;
 
-dsLocalStorageAdapterPrototype.getPath = function (resourceConfig, options) {
+dsLocalForageAdapterPrototype.getPath = function (resourceConfig, options) {
   return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.name);
 };
 
-dsLocalStorageAdapterPrototype.getIdPath = function (resourceConfig, options, id) {
+dsLocalForageAdapterPrototype.getIdPath = function (resourceConfig, options, id) {
   return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.getEndpoint(id, options), id);
 };
 
-dsLocalStorageAdapterPrototype.getIds = function (resourceConfig, options) {
+dsLocalForageAdapterPrototype.getIds = function (resourceConfig, options) {
   var idsPath = this.getPath(resourceConfig, options);
   return new P(function (resolve, reject) {
     localforage.getItem(idsPath, function (err, ids) {
@@ -392,7 +392,7 @@ dsLocalStorageAdapterPrototype.getIds = function (resourceConfig, options) {
   });
 };
 
-dsLocalStorageAdapterPrototype.saveKeys = function (ids, resourceConfig, options) {
+dsLocalForageAdapterPrototype.saveKeys = function (ids, resourceConfig, options) {
   var keysPath = this.getPath(resourceConfig, options);
   return new P(function (resolve, reject) {
     localforage.setItem(keysPath, ids, function (err, v) {
@@ -405,7 +405,7 @@ dsLocalStorageAdapterPrototype.saveKeys = function (ids, resourceConfig, options
   });
 };
 
-dsLocalStorageAdapterPrototype.ensureId = function (id, resourceConfig, options) {
+dsLocalForageAdapterPrototype.ensureId = function (id, resourceConfig, options) {
   var _this = this;
   return _this.getIds(resourceConfig, options).then(function (ids) {
     ids[id] = 1;
@@ -413,7 +413,7 @@ dsLocalStorageAdapterPrototype.ensureId = function (id, resourceConfig, options)
   });
 };
 
-dsLocalStorageAdapterPrototype.removeId = function (id, resourceConfig, options) {
+dsLocalForageAdapterPrototype.removeId = function (id, resourceConfig, options) {
   var _this = this;
   return _this.getIds(resourceConfig, options).then(function (ids) {
     delete ids[id];
@@ -421,7 +421,7 @@ dsLocalStorageAdapterPrototype.removeId = function (id, resourceConfig, options)
   });
 };
 
-dsLocalStorageAdapterPrototype.GET = function (key) {
+dsLocalForageAdapterPrototype.GET = function (key) {
   return new P(function (resolve, reject) {
     localforage.getItem(key, function (err, v) {
       if (err) {
@@ -433,7 +433,7 @@ dsLocalStorageAdapterPrototype.GET = function (key) {
   });
 };
 
-dsLocalStorageAdapterPrototype.PUT = function (key, value) {
+dsLocalForageAdapterPrototype.PUT = function (key, value) {
   return this.GET(key).then(function (item) {
     if (item) {
       deepMixIn(item, value);
@@ -450,13 +450,13 @@ dsLocalStorageAdapterPrototype.PUT = function (key, value) {
   });
 };
 
-dsLocalStorageAdapterPrototype.DEL = function (key) {
+dsLocalForageAdapterPrototype.DEL = function (key) {
   return new P(function (resolve) {
     localforage.removeItem(key, resolve);
   });
 };
 
-dsLocalStorageAdapterPrototype.find = function find(resourceConfig, id, options) {
+dsLocalForageAdapterPrototype.find = function find(resourceConfig, id, options) {
   options = options || {};
   return this.GET(this.getIdPath(resourceConfig, options, id)).then(function (item) {
     if (!item) {
@@ -467,7 +467,7 @@ dsLocalStorageAdapterPrototype.find = function find(resourceConfig, id, options)
   });
 };
 
-dsLocalStorageAdapterPrototype.findAll = function (resourceConfig, params, options) {
+dsLocalForageAdapterPrototype.findAll = function (resourceConfig, params, options) {
   var _this = this;
   options = options || {};
   return _this.getIds(resourceConfig, options).then(function (ids) {
@@ -485,7 +485,7 @@ dsLocalStorageAdapterPrototype.findAll = function (resourceConfig, params, optio
   });
 };
 
-dsLocalStorageAdapterPrototype.create = function (resourceConfig, attrs, options) {
+dsLocalForageAdapterPrototype.create = function (resourceConfig, attrs, options) {
   var _this = this;
   var i;
   attrs[resourceConfig.idAttribute] = attrs[resourceConfig.idAttribute] || guid();
@@ -501,7 +501,7 @@ dsLocalStorageAdapterPrototype.create = function (resourceConfig, attrs, options
     });
 };
 
-dsLocalStorageAdapterPrototype.update = function (resourceConfig, id, attrs, options) {
+dsLocalForageAdapterPrototype.update = function (resourceConfig, id, attrs, options) {
   var _this = this;
   var i;
   options = options || {};
@@ -513,7 +513,7 @@ dsLocalStorageAdapterPrototype.update = function (resourceConfig, id, attrs, opt
   });
 };
 
-dsLocalStorageAdapterPrototype.updateAll = function (resourceConfig, attrs, params, options) {
+dsLocalForageAdapterPrototype.updateAll = function (resourceConfig, attrs, params, options) {
   var _this = this;
   return _this.findAll(resourceConfig, params, options).then(function (items) {
     var tasks = [];
@@ -524,7 +524,7 @@ dsLocalStorageAdapterPrototype.updateAll = function (resourceConfig, attrs, para
   });
 };
 
-dsLocalStorageAdapterPrototype.destroy = function (resourceConfig, id, options) {
+dsLocalForageAdapterPrototype.destroy = function (resourceConfig, id, options) {
   var _this = this;
   options = options || {};
   return _this.DEL(_this.getIdPath(resourceConfig, options, id)).then(function () {
@@ -534,7 +534,7 @@ dsLocalStorageAdapterPrototype.destroy = function (resourceConfig, id, options) 
   });
 };
 
-dsLocalStorageAdapterPrototype.destroyAll = function (resourceConfig, params, options) {
+dsLocalForageAdapterPrototype.destroyAll = function (resourceConfig, params, options) {
   var _this = this;
   return _this.findAll(resourceConfig, params, options).then(function (items) {
     var tasks = [];

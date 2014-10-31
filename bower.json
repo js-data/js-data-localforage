@@ -1,11 +1,11 @@
 {
   "name": "js-data-localforage",
   "description": "localforage adapter for js-data.",
-  "version": "0.4.2",
-  "homepage": "http://www.js-data.io/js-data-localforage",
+  "version": "1.0.0-alpha.2",
+  "homepage": "http://www.js-data.io/docs/dslocalforageadapter",
   "repository": {
     "type": "git",
-    "url": "git://github.com/js-data/js-data-localforage.git"
+    "url": "https://github.com/js-data/js-data-localforage.git"
   },
   "author": {
     "name": "Jason Dobry",
@@ -30,7 +30,7 @@
     "karma.start.js"
   ],
   "dependencies": {
-    "js-data": "~0.4.x",
+    "js-data": "~1.0.x",
     "localforage": "~0.9.3"
   }
 }

@@ -78,8 +78,8 @@ module.exports = function (grunt) {
         browsers: ['Firefox'],
         options: {
           files: [
+            'bower_components/js-data/dist/js-data.js',
             'bower_components/localforage/dist/localforage.nopromises.js',
-            'bower_components/js-data/dist/js-data.min.js',
             'dist/js-data-localforage.min.js',
             'karma.start.js',
             'test/**/*.js'
