@@ -1,7 +1,6 @@
 {
   "name": "js-data-localforage",
   "description": "localforage adapter for js-data.",
-  "version": "1.0.0-alpha.3",
   "homepage": "http://www.js-data.io/docs/dslocalforageadapter",
   "repository": {
     "type": "git",
@@ -31,6 +30,6 @@
   ],
   "dependencies": {
     "js-data": "~1.0.x",
-    "localforage": "~0.9.3"
+    "localforage": "~1.2.1"
   }
 }
