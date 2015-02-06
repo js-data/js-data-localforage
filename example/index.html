@@ -7,9 +7,10 @@
   <link href="./example.css" rel="stylesheet">
   <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.2.25/angular.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.2.1/localforage.nopromises.min.js"></script>
-  <script src="https://github.com/js-data/js-data/releases/download/1.0.0-beta.1/js-data-1.0.0-beta.1.min.js"></script>
+  <script src="https://github.com/js-data/js-data/releases/download/1.2.0/js-data.min.js"></script>
+  <script src="https://github.com/js-data/js-data-angular/releases/download/2.1.0/js-data-angular.min.js"></script>
   <script
-    src="https://github.com/js-data/js-data-localforage/releases/download/1.0.0-beta.1/js-data-localforage-1.0.0-beta.1.min.js"></script>
+    src="https://github.com/js-data/js-data-localforage/releases/download/1.0.0/js-data-localforage.min.js"></script>
   <script src="./example.js"></script>
 </head>
 <body data-ng-controller="localforageCtrl as lfCtrl">
@@ -55,7 +56,7 @@
   </div>
   <div>
 <pre><code>
-angular.module('localforage-example', [])
+angular.module('localforage-example', ['js-data'])
   .factory('store', function () {
     var store = new JSData.DS();
 
@@ -71,20 +72,18 @@ angular.module('localforage-example', [])
 
     User.findAll().then(function (users) {
       $scope.users = users;
-      $scope.$apply();
     });
 
+    User.bindAll({}, $scope, 'users');
+
     $scope.add = function (user) {
-      User.create(user).then(function (users) {
+      return User.create(user).then(function (users) {
         lfCtrl.name = '';
-        $scope.$apply();
       });
     };
 
     $scope.remove = function (user) {
-      User.destroy(user.id).then(function () {
-        $scope.$apply();
-      });
+      return User.destroy(user.id);
     };
   });
 </code></pre>
