@@ -1,19 +1,25 @@
 /*
  * js-data-localforage
- * http://github.com/js-data/js-data-localforage
+ * https://github.com/js-data/js-data-localforage
  *
- * Copyright (c) 2014 Jason Dobry <http://www.js-data.io/js-data-localforage>
+ * Copyright (c) 2014-2015 Jason Dobry <http://www.js-data.io/docs/dslocalforageadapter>
  * Licensed under the MIT license. <https://github.com/js-data/js-data-localforage/blob/master/LICENSE>
  */
 module.exports = function (grunt) {
-  'use strict';
-
   require('jit-grunt')(grunt, {
     coveralls: 'grunt-karma-coveralls'
   });
   require('time-grunt')(grunt);
 
+  var webpack = require('webpack');
   var pkg = grunt.file.readJSON('package.json');
+  var banner = 'js-data-localforage\n' +
+    '@version ' + pkg.version + ' - Homepage <http://www.js-data.io/docs/dslocalforageadapter>\n' +
+    '@author Jason Dobry <jason.dobry@gmail.com>\n' +
+    '@copyright (c) 2014-2015 Jason Dobry \n' +
+    '@license MIT <https://github.com/js-data/js-data-localforage/blob/master/LICENSE>\n' +
+    '\n' +
+    '@overview localforage adapter for js-data.';
 
   // Project configuration.
   grunt.initConfig({
@@ -21,10 +27,6 @@ module.exports = function (grunt) {
     clean: {
       coverage: ['coverage/'],
       dist: ['dist/']
-    },
-    jshint: {
-      all: ['Gruntfile.js', 'src/**/*.js', 'test/*.js'],
-      jshintrc: '.jshintrc'
     },
     watch: {
       dist: {
@@ -35,32 +37,55 @@ module.exports = function (grunt) {
     uglify: {
       main: {
         options: {
-          banner: '/**\n' +
-            '* @author Jason Dobry <jason.dobry@gmail.com>\n' +
-            '* @file js-data-localforage.min.js\n' +
-            '* @version <%= pkg.version %> - Homepage <http://wwwjs-data.io/js-data-localforage>\n' +
-            '* @copyright (c) 2014 Jason Dobry\n' +
-            '* @license MIT <https://github.com/js-data/js-data-localforage/blob/master/LICENSE>\n' +
-            '*\n' +
-            '* @overview localforage adapter for js-data.\n' +
-            '*/\n'
+          sourceMap: true,
+          sourceMapName: 'dist/js-data-localforage.min.map',
+          banner: '/*!\n' +
+          '* js-data-localforage\n' +
+          '* @version <%= pkg.version %> - Homepage <http://wwwjs-data.io/docs/dslocalforageadapter>\n' +
+          '* @author Jason Dobry <jason.dobry@gmail.com>\n' +
+          '* @copyright (c) 2014-2015 Jason Dobry\n' +
+          '* @license MIT <https://github.com/js-data/js-data-localforage/blob/master/LICENSE>\n' +
+          '*\n' +
+          '* @overview localforage adapter for js-data.\n' +
+          '*/\n'
         },
         files: {
           'dist/js-data-localforage.min.js': ['dist/js-data-localforage.js']
         }
       }
     },
-    browserify: {
-      options: {
-        browserifyOptions: {
-          standalone: 'DSLocalForageAdapter'
-        },
-        external: ['js-data']
-      },
+    webpack: {
       dist: {
-        files: {
-          'dist/js-data-localforage.js': ['src/index.js']
-        }
+        entry: './src/index.js',
+        output: {
+          filename: './dist/js-data-localforage.js',
+          libraryTarget: 'umd',
+          library: 'DSLocalForageAdapter'
+        },
+        externals: {
+          'js-data': {
+            amd: 'js-data',
+            commonjs: 'js-data',
+            commonjs2: 'js-data',
+            root: 'JSData'
+          },
+          'localforage': 'localforage'
+        },
+        module: {
+          loaders: [
+            { test: /(src)(.+)\.js$/, exclude: /node_modules/, loader: 'babel-loader?blacklist=useStrict' }
+          ],
+          preLoaders: [
+            {
+              test: /(src)(.+)\.js$|(test)(.+)\.js$/, // include .js files
+              exclude: /node_modules/, // exclude any and all files in the node_modules folder
+              loader: "jshint-loader?failOnHint=true"
+            }
+          ]
+        },
+        plugins: [
+          new webpack.BannerPlugin(banner)
+        ]
       }
     },
     karma: {
@@ -75,7 +100,7 @@ module.exports = function (grunt) {
         preprocessors: {}
       },
       min: {
-        browsers: ['Firefox'],
+        browsers: ['Firefox', 'Chrome'],
         options: {
           files: [
             'bower_components/js-data/dist/js-data.js',
@@ -87,7 +112,7 @@ module.exports = function (grunt) {
         }
       },
       ci: {
-        browsers: ['Firefox']
+        browsers: ['Firefox', 'Chrome']
       }
     },
     coveralls: {
@@ -97,38 +122,10 @@ module.exports = function (grunt) {
     }
   });
 
-  grunt.registerTask('version', function (filePath) {
-    var file = grunt.file.read(filePath);
-
-    file = file.replace(/<%= pkg\.version %>/gi, pkg.version);
-
-    grunt.file.write(filePath, file);
-  });
-
-  grunt.registerTask('banner', function () {
-    var file = grunt.file.read('dist/js-data-localforage.js');
-
-    var banner = '/**\n' +
-      '* @author Jason Dobry <jason.dobry@gmail.com>\n' +
-      '* @file js-data-localforage.js\n' +
-      '* @version ' + pkg.version + ' - Homepage <http://www.js-data.iojs-data-localforage/>\n' +
-      '* @copyright (c) 2014 Jason Dobry \n' +
-      '* @license MIT <https://github.com/js-data/js-data-localforage/blob/master/LICENSE>\n' +
-      '*\n' +
-      '* @overview localforage adapter for js-data.\n' +
-      '*/\n';
-
-    file = banner + file;
-
-    grunt.file.write('dist/js-data-localforage.js', file);
-  });
-
   grunt.registerTask('test', ['build', 'karma:ci', 'karma:min']);
   grunt.registerTask('build', [
     'clean',
-    'jshint',
-    'browserify',
-    'banner',
+    'webpack',
     'uglify:main'
   ]);
   grunt.registerTask('go', ['build', 'watch:dist']);

@@ -1,124 +1,63 @@
-var JSData;
+import JSData from 'js-data';
+import localforage from 'localforage';
 
-try {
-  JSData = require('js-data');
-} catch (e) {
-}
+let emptyStore = new JSData.DS();
+let DSUtils = JSData.DSUtils;
+let makePath = DSUtils.makePath;
+let deepMixIn = DSUtils.deepMixIn;
+let forEach = DSUtils.forEach;
+let filter = emptyStore.defaults.defaultFilter;
+let removeCircular = DSUtils.removeCircular;
+let omit = require('mout/object/omit');
+let guid = require('mout/random/guid');
+let keys = require('mout/object/keys');
+let P = DSUtils.Promise;
 
-if (!JSData) {
-  try {
-    JSData = window.JSData;
-  } catch (e) {
-  }
-}
-
-if (!JSData) {
-  throw new Error('js-data must be loaded!');
-} else if (!localforage) {
-  throw new Error('localforage must be loaded!');
-}
-
-var emptyStore = new JSData.DS();
-var DSUtils = JSData.DSUtils;
-var makePath = DSUtils.makePath;
-var deepMixIn = DSUtils.deepMixIn;
-var forEach = DSUtils.forEach;
-var filter = emptyStore.defaults.defaultFilter;
-var guid = require('mout/random/guid');
-var keys = require('mout/object/keys');
-var P = DSUtils.Promise;
-
-function Defaults() {
+class Defaults {
 
 }
 
 Defaults.prototype.basePath = '';
 
-function DSLocalForageAdapter(options) {
-  options = options || {};
-  this.defaults = new Defaults();
-  deepMixIn(this.defaults, options);
-}
+class DSLocalForageAdapter {
+  constructor(options) {
+    this.defaults = new Defaults();
+    deepMixIn(this.defaults, options);
+  }
 
-var dsLocalForageAdapterPrototype = DSLocalForageAdapter.prototype;
+  getPath(resourceConfig, options) {
+    return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.name);
+  }
 
-dsLocalForageAdapterPrototype.getPath = function (resourceConfig, options) {
-  return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.name);
-};
+  getIdPath(resourceConfig, options, id) {
+    return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.getEndpoint(id, options), id);
+  }
 
-dsLocalForageAdapterPrototype.getIdPath = function (resourceConfig, options, id) {
-  return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.getEndpoint(id, options), id);
-};
-
-dsLocalForageAdapterPrototype.getIds = function (resourceConfig, options) {
-  var idsPath = this.getPath(resourceConfig, options);
-  return new P(function (resolve, reject) {
-    localforage.getItem(idsPath, function (err, ids) {
-      if (err) {
-        return reject(err);
-      } else if (ids) {
-        return resolve(ids);
-      } else {
-        return localforage.setItem(idsPath, {}, function (err, v) {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(v);
-          }
-        });
-      }
+  getIds(resourceConfig, options) {
+    let idsPath = this.getPath(resourceConfig, options);
+    return new P((resolve, reject) => {
+      localforage.getItem(idsPath, (err, ids) => {
+        if (err) {
+          return reject(err);
+        } else if (ids) {
+          return resolve(ids);
+        } else {
+          return localforage.setItem(idsPath, {}, (err, v) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(v);
+            }
+          });
+        }
+      });
     });
-  });
-};
+  }
 
-dsLocalForageAdapterPrototype.saveKeys = function (ids, resourceConfig, options) {
-  var keysPath = this.getPath(resourceConfig, options);
-  return new P(function (resolve, reject) {
-    localforage.setItem(keysPath, ids, function (err, v) {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(v);
-      }
-    });
-  });
-};
-
-dsLocalForageAdapterPrototype.ensureId = function (id, resourceConfig, options) {
-  var _this = this;
-  return _this.getIds(resourceConfig, options).then(function (ids) {
-    ids[id] = 1;
-    return _this.saveKeys(ids, resourceConfig, options);
-  });
-};
-
-dsLocalForageAdapterPrototype.removeId = function (id, resourceConfig, options) {
-  var _this = this;
-  return _this.getIds(resourceConfig, options).then(function (ids) {
-    delete ids[id];
-    return _this.saveKeys(ids, resourceConfig, options);
-  });
-};
-
-dsLocalForageAdapterPrototype.GET = function (key) {
-  return new P(function (resolve, reject) {
-    localforage.getItem(key, function (err, v) {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(v);
-      }
-    });
-  });
-};
-
-dsLocalForageAdapterPrototype.PUT = function (key, value) {
-  return this.GET(key).then(function (item) {
-    if (item) {
-      deepMixIn(item, value);
-    }
-    return new P(function (resolve, reject) {
-      localforage.setItem(key, item || value, function (err, v) {
+  saveKeys(ids, resourceConfig, options) {
+    let keysPath = this.getPath(resourceConfig, options);
+    return new P((resolve, reject) => {
+      localforage.setItem(keysPath, ids, (err, v) => {
         if (err) {
           reject(err);
         } else {
@@ -126,102 +65,129 @@ dsLocalForageAdapterPrototype.PUT = function (key, value) {
         }
       });
     });
-  });
-};
+  }
 
-dsLocalForageAdapterPrototype.DEL = function (key) {
-  return new P(function (resolve) {
-    localforage.removeItem(key, resolve);
-  });
-};
-
-dsLocalForageAdapterPrototype.find = function find(resourceConfig, id, options) {
-  options = options || {};
-  return this.GET(this.getIdPath(resourceConfig, options, id)).then(function (item) {
-    if (!item) {
-      return P.reject(new Error('Not Found!'));
-    } else {
-      return item;
-    }
-  });
-};
-
-dsLocalForageAdapterPrototype.findAll = function (resourceConfig, params, options) {
-  var _this = this;
-  options = options || {};
-  return _this.getIds(resourceConfig, options).then(function (ids) {
-    var idsArray = keys(ids);
-    if (!('allowSimpleWhere' in options)) {
-      options.allowSimpleWhere = true;
-    }
-    var tasks = [];
-    forEach(idsArray, function (id) {
-      tasks.push(_this.GET(_this.getIdPath(resourceConfig, options, id)));
+  ensureId(id, resourceConfig, options) {
+    return this.getIds(resourceConfig, options).then(ids => {
+      ids[id] = 1;
+      return this.saveKeys(ids, resourceConfig, options);
     });
-    return P.all(tasks);
-  }).then(function (items) {
-    return filter.call(emptyStore, items, resourceConfig.name, params, options);
-  });
-};
+  }
 
-dsLocalForageAdapterPrototype.create = function (resourceConfig, attrs, options) {
-  var _this = this;
-  var i;
-  attrs[resourceConfig.idAttribute] = attrs[resourceConfig.idAttribute] || guid();
-  options = options || {};
-  return _this.PUT(
-    makePath(this.getIdPath(resourceConfig, options, attrs[resourceConfig.idAttribute])),
-    attrs
-  ).then(function (item) {
-      i = item;
-      return _this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
-    }).then(function () {
-      return i;
+  removeId(id, resourceConfig, options) {
+    return this.getIds(resourceConfig, options).then(ids => {
+      delete ids[id];
+      return this.saveKeys(ids, resourceConfig, options);
     });
-};
+  }
 
-dsLocalForageAdapterPrototype.update = function (resourceConfig, id, attrs, options) {
-  var _this = this;
-  var i;
-  options = options || {};
-  return _this.PUT(_this.getIdPath(resourceConfig, options, id), attrs).then(function (item) {
-    i = item;
-    return _this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
-  }).then(function () {
-    return i;
-  });
-};
-
-dsLocalForageAdapterPrototype.updateAll = function (resourceConfig, attrs, params, options) {
-  var _this = this;
-  return _this.findAll(resourceConfig, params, options).then(function (items) {
-    var tasks = [];
-    forEach(items, function (item) {
-      tasks.push(_this.update(resourceConfig, item[resourceConfig.idAttribute], attrs, options));
+  GET(key) {
+    return new P((resolve, reject) => {
+      localforage.getItem(key, (err, v) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(v);
+        }
+      });
     });
-    return P.all(tasks);
-  });
-};
+  }
 
-dsLocalForageAdapterPrototype.destroy = function (resourceConfig, id, options) {
-  var _this = this;
-  options = options || {};
-  return _this.DEL(_this.getIdPath(resourceConfig, options, id)).then(function () {
-    return _this.removeId(id, resourceConfig, options);
-  }).then(function () {
-    return null;
-  });
-};
-
-dsLocalForageAdapterPrototype.destroyAll = function (resourceConfig, params, options) {
-  var _this = this;
-  return _this.findAll(resourceConfig, params, options).then(function (items) {
-    var tasks = [];
-    forEach(items, function (item) {
-      tasks.push(_this.destroy(resourceConfig, item[resourceConfig.idAttribute], options));
+  PUT(key, value) {
+    value = removeCircular(value);
+    return this.GET(key).then(item => {
+      if (item) {
+        deepMixIn(item, value);
+      }
+      return new P((resolve, reject) => {
+        localforage.setItem(key, item || value, (err, v) => err ? reject(err) : resolve(v));
+      });
     });
-    return P.all(tasks);
-  });
-};
+  }
 
-module.exports = DSLocalForageAdapter;
+  DEL(key) {
+    return new P(resolve => localforage.removeItem(key, resolve));
+  }
+
+  find(resourceConfig, id, options) {
+    options = options || {};
+    return this.GET(this.getIdPath(resourceConfig, options, id)).then(item => {
+      if (!item) {
+        return P.reject(new Error('Not Found!'));
+      } else {
+        return item;
+      }
+    });
+  }
+
+  findAll(resourceConfig, params, options) {
+    options = options || {};
+    return this.getIds(resourceConfig, options).then(ids => {
+      let idsArray = keys(ids);
+      if (!('allowSimpleWhere' in options)) {
+        options.allowSimpleWhere = true;
+      }
+      let tasks = [];
+      forEach(idsArray, id => {
+        tasks.push(this.GET(this.getIdPath(resourceConfig, options, id)));
+      });
+      return P.all(tasks);
+    }).then(items => {
+      return filter.call(emptyStore, items, resourceConfig.name, params, options);
+    });
+  }
+
+  create(resourceConfig, attrs, options) {
+    let i;
+    attrs[resourceConfig.idAttribute] = attrs[resourceConfig.idAttribute] || guid();
+    options = options || {};
+    return this.PUT(
+      makePath(this.getIdPath(resourceConfig, options, attrs[resourceConfig.idAttribute])),
+      omit(attrs, resourceConfig.relationFields || [])
+    ).then(item => {
+        i = item;
+        return this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
+      }).then(() => i);
+  }
+
+  update(resourceConfig, id, attrs, options) {
+    let i;
+    options = options || {};
+    return this.PUT(
+      this.getIdPath(resourceConfig, options, id),
+      omit(attrs, resourceConfig.relationFields || [])
+    ).then(item => {
+        i = item;
+        return this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
+      }).then(() => i);
+  }
+
+  updateAll(resourceConfig, attrs, params, options) {
+    return this.findAll(resourceConfig, params, options).then(items => {
+      let tasks = [];
+      forEach(items, item => {
+        tasks.push(this.update(resourceConfig, item[resourceConfig.idAttribute], omit(attrs, resourceConfig.relationFields || []), options));
+      });
+      return P.all(tasks);
+    });
+  }
+
+  destroy(resourceConfig, id, options) {
+    options = options || {};
+    return this.DEL(this.getIdPath(resourceConfig, options, id)).then(() => {
+      return this.removeId(id, resourceConfig, options);
+    }).then(() => null);
+  }
+
+  destroyAll(resourceConfig, params, options) {
+    return this.findAll(resourceConfig, params, options).then(items => {
+      var tasks = [];
+      forEach(items, item => {
+        tasks.push(this.destroy(resourceConfig, item[resourceConfig.idAttribute], options));
+      });
+      return P.all(tasks);
+    });
+  }
+}
+
+export default DSLocalForageAdapter;
