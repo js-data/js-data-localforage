@@ -53,7 +53,7 @@ First, support is handled via the [Mailing List](https://groups.io/org/groupsio/
 
 When submitting issues on GitHub, please include as much detail as possible to make debugging quick and easy.
 
-- good - Your versions of Angular, JSData, etc, relevant console logs/error, code examples that revealed the issue
+- good - Your versions of js-data, js-data-localforage, localforage, etc, relevant console logs/error, code examples that revealed the issue
 - better - A [plnkr](http://plnkr.co/), [fiddle](http://jsfiddle.net/), or [bin](http://jsbin.com/?html,output) that demonstrates the issue
 - best - A Pull Request that fixes the issue, including test coverage for the issue and the fix
 
