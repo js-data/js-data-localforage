@@ -1,23 +1,56 @@
 import JSData from 'js-data';
 import localforage from 'localforage';
-
-let emptyStore = new JSData.DS();
-let DSUtils = JSData.DSUtils;
-let makePath = DSUtils.makePath;
-let deepMixIn = DSUtils.deepMixIn;
-let forEach = DSUtils.forEach;
-let filter = emptyStore.defaults.defaultFilter;
-let removeCircular = DSUtils.removeCircular;
 let omit = require('mout/object/omit');
 let guid = require('mout/random/guid');
 let keys = require('mout/object/keys');
-let P = DSUtils.Promise;
+
+let emptyStore = new JSData.DS();
+let { DSUtils } = JSData;
+let { makePath, deepMixIn, forEach, removeCircular } = DSUtils;
+let filter = emptyStore.defaults.defaultFilter;
 
 class Defaults {
 
 }
 
 Defaults.prototype.basePath = '';
+
+let queue = [];
+let taskInProcess = false;
+
+function enqueue(task) {
+  queue.push(task);
+}
+
+function dequeue() {
+  if (queue.length && !taskInProcess) {
+    taskInProcess = true;
+    queue[0]();
+  }
+}
+
+function queueTask(task) {
+  if (!queue.length) {
+    enqueue(task);
+    dequeue();
+  } else {
+    enqueue(task);
+  }
+}
+
+function createTask(fn) {
+  return new DSUtils.Promise(fn).then(result => {
+    taskInProcess = false;
+    queue.shift();
+    setTimeout(dequeue, 0);
+    return result;
+  }, err => {
+    taskInProcess = false;
+    queue.shift();
+    setTimeout(dequeue, 0);
+    return DSUtils.Promise.reject(err);
+  });
+}
 
 class DSLocalForageAdapter {
   constructor(options) {
@@ -35,7 +68,7 @@ class DSLocalForageAdapter {
 
   getIds(resourceConfig, options) {
     let idsPath = this.getPath(resourceConfig, options);
-    return new P((resolve, reject) => {
+    return new DSUtils.Promise((resolve, reject) => {
       localforage.getItem(idsPath, (err, ids) => {
         if (err) {
           return reject(err);
@@ -56,7 +89,7 @@ class DSLocalForageAdapter {
 
   saveKeys(ids, resourceConfig, options) {
     let keysPath = this.getPath(resourceConfig, options);
-    return new P((resolve, reject) => {
+    return new DSUtils.Promise((resolve, reject) => {
       localforage.setItem(keysPath, ids, (err, v) => {
         if (err) {
           reject(err);
@@ -82,7 +115,7 @@ class DSLocalForageAdapter {
   }
 
   GET(key) {
-    return new P((resolve, reject) => {
+    return new DSUtils.Promise((resolve, reject) => {
       localforage.getItem(key, (err, v) => {
         if (err) {
           reject(err);
@@ -99,84 +132,106 @@ class DSLocalForageAdapter {
       if (item) {
         deepMixIn(item, value);
       }
-      return new P((resolve, reject) => {
+      return new DSUtils.Promise((resolve, reject) => {
         localforage.setItem(key, item || value, (err, v) => err ? reject(err) : resolve(v));
       });
     });
   }
 
   DEL(key) {
-    return new P(resolve => localforage.removeItem(key, resolve));
+    return new DSUtils.Promise(resolve => localforage.removeItem(key, resolve));
   }
 
   find(resourceConfig, id, options) {
-    options = options || {};
-    return this.GET(this.getIdPath(resourceConfig, options, id)).then(item => {
-      if (!item) {
-        return P.reject(new Error('Not Found!'));
-      } else {
-        return item;
-      }
+    return createTask((resolve, reject) => {
+      queueTask(() => {
+        options = options || {};
+        this.GET(this.getIdPath(resourceConfig, options, id)).then(item => {
+          if (!item) {
+            reject(new Error('Not Found!'));
+          } else {
+            resolve(item);
+          }
+        }, reject);
+      });
     });
   }
 
   findAll(resourceConfig, params, options) {
-    options = options || {};
-    return this.getIds(resourceConfig, options).then(ids => {
-      let idsArray = keys(ids);
-      if (!('allowSimpleWhere' in options)) {
-        options.allowSimpleWhere = true;
-      }
-      let tasks = [];
-      forEach(idsArray, id => {
-        tasks.push(this.GET(this.getIdPath(resourceConfig, options, id)));
+    return createTask((resolve, reject) => {
+      queueTask(() => {
+        options = options || {};
+        this.getIds(resourceConfig, options).then(ids => {
+          let idsArray = keys(ids);
+          if (!('allowSimpleWhere' in options)) {
+            options.allowSimpleWhere = true;
+          }
+          let tasks = [];
+          forEach(idsArray, id => {
+            tasks.push(this.GET(this.getIdPath(resourceConfig, options, id)));
+          });
+          return DSUtils.Promise.all(tasks);
+        }).then(items => {
+          return filter.call(emptyStore, items, resourceConfig.name, params, options);
+        }).then(resolve, reject);
       });
-      return P.all(tasks);
-    }).then(items => {
-      return filter.call(emptyStore, items, resourceConfig.name, params, options);
     });
   }
 
   create(resourceConfig, attrs, options) {
-    let i;
-    attrs[resourceConfig.idAttribute] = attrs[resourceConfig.idAttribute] || guid();
-    options = options || {};
-    return this.PUT(
-      makePath(this.getIdPath(resourceConfig, options, attrs[resourceConfig.idAttribute])),
-      omit(attrs, resourceConfig.relationFields || [])
-    ).then(item => {
-        i = item;
-        return this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
-      }).then(() => i);
+    return createTask((resolve, reject) => {
+      queueTask(() => {
+        let i;
+        attrs[resourceConfig.idAttribute] = attrs[resourceConfig.idAttribute] || guid();
+        options = options || {};
+        this.PUT(
+          makePath(this.getIdPath(resourceConfig, options, attrs[resourceConfig.idAttribute])),
+          omit(attrs, resourceConfig.relationFields || [])
+        ).then(item => {
+            i = item;
+            return this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
+          }).then(() => {
+            resolve(i);
+          }, reject);
+      });
+    });
   }
 
   update(resourceConfig, id, attrs, options) {
-    let i;
-    options = options || {};
-    return this.PUT(
-      this.getIdPath(resourceConfig, options, id),
-      omit(attrs, resourceConfig.relationFields || [])
-    ).then(item => {
-        i = item;
-        return this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
-      }).then(() => i);
+    return createTask((resolve, reject) => {
+      queueTask(() => {
+        let i;
+        options = options || {};
+        this.PUT(
+          this.getIdPath(resourceConfig, options, id),
+          omit(attrs, resourceConfig.relationFields || [])
+        ).then(item => {
+            i = item;
+            return this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
+          }).then(() => resolve(i), reject);
+      });
+    });
   }
 
   updateAll(resourceConfig, attrs, params, options) {
-    return this.findAll(resourceConfig, params, options).then(items => {
+   return  this.findAll(resourceConfig, params, options).then(items => {
       let tasks = [];
       forEach(items, item => {
         tasks.push(this.update(resourceConfig, item[resourceConfig.idAttribute], omit(attrs, resourceConfig.relationFields || []), options));
       });
-      return P.all(tasks);
+      return DSUtils.Promise.all(tasks);
     });
   }
 
   destroy(resourceConfig, id, options) {
-    options = options || {};
-    return this.DEL(this.getIdPath(resourceConfig, options, id)).then(() => {
-      return this.removeId(id, resourceConfig, options);
-    }).then(() => null);
+    return createTask((resolve, reject) => {
+      queueTask(() => {
+        options = options || {};
+        this.DEL(this.getIdPath(resourceConfig, options, id)).then(() => {
+          return this.removeId(id, resourceConfig, options);
+        }).then(() => resolve(null), reject);
+      });
+    });
   }
 
   destroyAll(resourceConfig, params, options) {
@@ -185,7 +240,7 @@ class DSLocalForageAdapter {
       forEach(items, item => {
         tasks.push(this.destroy(resourceConfig, item[resourceConfig.idAttribute], options));
       });
-      return P.all(tasks);
+      return DSUtils.Promise.all(tasks);
     });
   }
 }

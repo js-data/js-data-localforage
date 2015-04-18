@@ -1,8 +1,8 @@
 describe('dsLocalForageAdapter#findAll', function () {
-  it('should filter users', function (done) {
+  it('should filter users', function () {
     var id;
 
-    dsLocalForageAdapter.findAll(User, {
+    return dsLocalForageAdapter.findAll(User, {
       age: 30
     }).then(function (users) {
       assert.equal(users.length, 0);
@@ -18,7 +18,6 @@ describe('dsLocalForageAdapter#findAll', function () {
       return dsLocalForageAdapter.destroy(User, id);
     }).then(function (destroyedUser) {
       assert.isFalse(!!destroyedUser);
-      done();
-    }).catch(done);
+    });
   });
 });
