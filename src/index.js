@@ -1,12 +1,11 @@
-import JSData from 'js-data';
-import localforage from 'localforage';
-let omit = require('mout/object/omit');
+let JSData = require('js-data');
+let localforage = require('localforage');
 let guid = require('mout/random/guid');
 let keys = require('mout/object/keys');
 
 let emptyStore = new JSData.DS();
 let { DSUtils } = JSData;
-let { makePath, deepMixIn, forEach, removeCircular } = DSUtils;
+let { omit, makePath, deepMixIn, forEach, removeCircular } = DSUtils;
 let filter = emptyStore.defaults.defaultFilter;
 
 class Defaults {
@@ -63,7 +62,7 @@ class DSLocalForageAdapter {
   }
 
   getIdPath(resourceConfig, options, id) {
-    return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.getEndpoint(id, options), id);
+    return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.endpoint, id);
   }
 
   getIds(resourceConfig, options) {
@@ -103,6 +102,7 @@ class DSLocalForageAdapter {
   ensureId(id, resourceConfig, options) {
     return this.getIds(resourceConfig, options).then(ids => {
       ids[id] = 1;
+      console.log(Object.keys(ids || {}).length);
       return this.saveKeys(ids, resourceConfig, options);
     });
   }
@@ -181,6 +181,7 @@ class DSLocalForageAdapter {
   create(resourceConfig, attrs, options) {
     return createTask((resolve, reject) => {
       queueTask(() => {
+        console.log('start ' + resourceConfig.name + ' task', attrs[resourceConfig.idAttribute]);
         let i;
         attrs[resourceConfig.idAttribute] = attrs[resourceConfig.idAttribute] || guid();
         options = options || {};
@@ -191,6 +192,7 @@ class DSLocalForageAdapter {
             i = item;
             return this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
           }).then(() => {
+            console.log('complete ' + resourceConfig.name + ' task', i[resourceConfig.idAttribute]);
             resolve(i);
           }, reject);
       });
@@ -214,7 +216,7 @@ class DSLocalForageAdapter {
   }
 
   updateAll(resourceConfig, attrs, params, options) {
-   return  this.findAll(resourceConfig, params, options).then(items => {
+    return this.findAll(resourceConfig, params, options).then(items => {
       let tasks = [];
       forEach(items, item => {
         tasks.push(this.update(resourceConfig, item[resourceConfig.idAttribute], omit(attrs, resourceConfig.relationFields || []), options));
@@ -245,4 +247,4 @@ class DSLocalForageAdapter {
   }
 }
 
-export default DSLocalForageAdapter;
+module.exports = DSLocalForageAdapter;
