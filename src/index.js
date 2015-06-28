@@ -102,7 +102,6 @@ class DSLocalForageAdapter {
   ensureId(id, resourceConfig, options) {
     return this.getIds(resourceConfig, options).then(ids => {
       ids[id] = 1;
-      console.log(Object.keys(ids || {}).length);
       return this.saveKeys(ids, resourceConfig, options);
     });
   }
@@ -181,7 +180,6 @@ class DSLocalForageAdapter {
   create(resourceConfig, attrs, options) {
     return createTask((resolve, reject) => {
       queueTask(() => {
-        console.log('start ' + resourceConfig.name + ' task', attrs[resourceConfig.idAttribute]);
         let i;
         attrs[resourceConfig.idAttribute] = attrs[resourceConfig.idAttribute] || guid();
         options = options || {};
@@ -192,7 +190,6 @@ class DSLocalForageAdapter {
             i = item;
             return this.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
           }).then(() => {
-            console.log('complete ' + resourceConfig.name + ' task', i[resourceConfig.idAttribute]);
             resolve(i);
           }, reject);
       });

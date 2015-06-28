@@ -65,7 +65,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
-	var _classCallCheck = function (instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } };
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 	var JSData = __webpack_require__(1);
 	var localforage = __webpack_require__(2);
@@ -186,7 +186,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      return this.getIds(resourceConfig, options).then(function (ids) {
 	        ids[id] = 1;
-	        console.log(Object.keys(ids || {}).length);
 	        return _this.saveKeys(ids, resourceConfig, options);
 	      });
 	    }
@@ -284,7 +283,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      return createTask(function (resolve, reject) {
 	        queueTask(function () {
-	          console.log('start ' + resourceConfig.name + ' task', attrs[resourceConfig.idAttribute]);
 	          var i = undefined;
 	          attrs[resourceConfig.idAttribute] = attrs[resourceConfig.idAttribute] || guid();
 	          options = options || {};
@@ -292,7 +290,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	            i = item;
 	            return _this5.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
 	          }).then(function () {
-	            console.log('complete ' + resourceConfig.name + ' task', i[resourceConfig.idAttribute]);
 	            resolve(i);
 	          }, reject);
 	        });
@@ -504,8 +501,8 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var MIN_INT = __webpack_require__(13);
-	var MAX_INT = __webpack_require__(12);
+	var MIN_INT = __webpack_require__(12);
+	var MAX_INT = __webpack_require__(13);
 	var rand = __webpack_require__(14);
 
 	    /**
@@ -643,18 +640,6 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
-	 * @constant Maximum 32-bit signed integer value. (2^31 - 1)
-	 */
-
-	    module.exports = 2147483647;
-
-
-
-/***/ },
-/* 13 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
 	 * @constant Minimum 32-bit signed integer value (-2^31).
 	 */
 
@@ -663,12 +648,24 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * @constant Maximum 32-bit signed integer value. (2^31 - 1)
+	 */
+
+	    module.exports = 2147483647;
+
+
+
+/***/ },
 /* 14 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var random = __webpack_require__(17);
-	var MIN_INT = __webpack_require__(13);
-	var MAX_INT = __webpack_require__(12);
+	var random = __webpack_require__(16);
+	var MIN_INT = __webpack_require__(12);
+	var MAX_INT = __webpack_require__(13);
 
 	    /**
 	     * Returns random number inside range
@@ -687,7 +684,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var kindOf = __webpack_require__(16);
+	var kindOf = __webpack_require__(17);
 	    /**
 	     * Check if value is from a specific "kind".
 	     */
@@ -700,6 +697,30 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 16 */
+/***/ function(module, exports, __webpack_require__) {
+
+	
+
+	    /**
+	     * Just a wrapper to Math.random. No methods inside mout/random should call
+	     * Math.random() directly so we can inject the pseudo-random number
+	     * generator if needed (ie. in case we need a seeded random or a better
+	     * algorithm than the native one)
+	     */
+	    function random(){
+	        return random.get();
+	    }
+
+	    // we expose the method so it can be swapped if needed
+	    random.get = Math.random;
+
+	    module.exports = random;
+
+
+
+
+/***/ },
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	
@@ -721,30 +742,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	    }
 	    module.exports = kindOf;
-
-
-
-/***/ },
-/* 17 */
-/***/ function(module, exports, __webpack_require__) {
-
-	
-
-	    /**
-	     * Just a wrapper to Math.random. No methods inside mout/random should call
-	     * Math.random() directly so we can inject the pseudo-random number
-	     * generator if needed (ie. in case we need a seeded random or a better
-	     * algorithm than the native one)
-	     */
-	    function random(){
-	        return random.get();
-	    }
-
-	    // we expose the method so it can be swapped if needed
-	    random.get = Math.random;
-
-	    module.exports = random;
-
 
 
 
