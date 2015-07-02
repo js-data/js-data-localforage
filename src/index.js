@@ -1,11 +1,10 @@
 let JSData = require('js-data');
 let localforage = require('localforage');
 let guid = require('mout/random/guid');
-let keys = require('mout/object/keys');
 
 let emptyStore = new JSData.DS();
 let { DSUtils } = JSData;
-let { omit, makePath, deepMixIn, forEach, removeCircular } = DSUtils;
+let { keys, omit, makePath, deepMixIn, forEach, removeCircular } = DSUtils;
 let filter = emptyStore.defaults.defaultFilter;
 
 class Defaults {
