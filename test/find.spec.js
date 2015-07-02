@@ -1,7 +1,7 @@
 describe('dsLocalForageAdapter#find', function () {
-  it('should find a user in localForage', function (done) {
+  it('should find a user in localForage', function () {
     var id;
-    dsLocalForageAdapter.create(User, { name: 'John' })
+    return dsLocalForageAdapter.create(User, { name: 'John' })
       .then(function (user) {
         id = user.id;
         assert.equal(user.name, 'John');
@@ -19,11 +19,10 @@ describe('dsLocalForageAdapter#find', function () {
         return dsLocalForageAdapter.find(User, id);
       })
       .then(function () {
-        done('Should not have reached here!');
+        throw new Error('Should not have reached here!');
       })
       .catch(function (err) {
         assert.equal(err.message, 'Not Found!');
-        done();
       });
   });
 });

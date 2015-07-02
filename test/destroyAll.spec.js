@@ -1,7 +1,7 @@
 describe('dsLocalForageAdapter#destroyAll', function () {
-  it('should destroy all items', function (done) {
+  it('should destroy all items', function () {
     var id;
-    dsLocalForageAdapter.create(User, { name: 'John' })
+    return dsLocalForageAdapter.create(User, { name: 'John' })
       .then(function (user) {
         id = user.id;
         return dsLocalForageAdapter.findAll(User, {
@@ -19,7 +19,6 @@ describe('dsLocalForageAdapter#destroyAll', function () {
         });
       }).then(function (users) {
         assert.equal(users.length, 0);
-        done();
-      }).catch(done);
+      });
   });
 });
