@@ -1,6 +1,6 @@
 /*!
  * js-data-localforage
- * @version 2.1.0 - Homepage <http://www.js-data.io/docs/dslocalforageadapter>
+ * @version 2.1.1 - Homepage <http://www.js-data.io/docs/dslocalforageadapter>
  * @author Jason Dobry <jason.dobry@gmail.com>
  * @copyright (c) 2014-2015 Jason Dobry 
  * @license MIT <https://github.com/js-data/js-data-localforage/blob/master/LICENSE>
@@ -241,6 +241,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var instance = undefined;
 	      return new DSUtils.Promise(function (resolve, reject) {
 	        options = options || {};
+	        options['with'] = options['with'] || [];
 	        _this3.GET(_this3.getIdPath(resourceConfig, options, id)).then(function (item) {
 	          if (!item) {
 	            reject(new Error('Not Found!'));
@@ -264,11 +265,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	          if (containedName) {
 	            (function () {
 	              var __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
+	              __options['with'] = options['with'].slice();
 	              __options = DSUtils._(relationDef, __options);
 	              DSUtils.remove(__options['with'], containedName);
 	              DSUtils.forEach(__options['with'], function (relation, i) {
 	                if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
 	                  __options['with'][i] = relation.substr(containedName.length + 1);
+	                } else {
+	                  __options['with'][i] = '';
 	                }
 	              });
 
@@ -329,6 +333,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      var items = null;
 	      return new DSUtils.Promise(function (resolve, reject) {
 	        options = options || {};
+	        options['with'] = options['with'] || [];
 	        _this4.getIds(resourceConfig, options).then(function (ids) {
 	          var idsArray = DSUtils.keys(ids);
 	          if (!('allowSimpleWhere' in options)) {
@@ -357,11 +362,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	          if (containedName) {
 	            (function () {
 	              var __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
+	              __options['with'] = options['with'].slice();
 	              __options = DSUtils._(relationDef, __options);
 	              DSUtils.remove(__options['with'], containedName);
 	              DSUtils.forEach(__options['with'], function (relation, i) {
 	                if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
 	                  __options['with'][i] = relation.substr(containedName.length + 1);
+	                } else {
+	                  __options['with'][i] = '';
 	                }
 	              });
 

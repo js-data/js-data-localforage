@@ -146,6 +146,7 @@ class DSLocalForageAdapter {
     let instance;
     return new DSUtils.Promise((resolve, reject) => {
       options = options || {};
+      options.with = options.with || [];
       this.GET(this.getIdPath(resourceConfig, options, id)).then(item => {
         if (!item) {
           reject(new Error('Not Found!'));
@@ -168,11 +169,14 @@ class DSLocalForageAdapter {
           }
           if (containedName) {
             let __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
+            __options.with = options.with.slice();
             __options = DSUtils._(relationDef, __options);
             DSUtils.remove(__options.with, containedName);
             DSUtils.forEach(__options.with, (relation, i) => {
               if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
                 __options.with[i] = relation.substr(containedName.length + 1);
+              } else {
+                __options.with[i] = '';
               }
             });
 
@@ -229,6 +233,7 @@ class DSLocalForageAdapter {
     let items = null;
     return new DSUtils.Promise((resolve, reject) => {
       options = options || {};
+      options.with = options.with || [];
       this.getIds(resourceConfig, options).then(ids => {
         let idsArray = DSUtils.keys(ids);
         if (!('allowSimpleWhere' in options)) {
@@ -256,11 +261,14 @@ class DSLocalForageAdapter {
           }
           if (containedName) {
             let __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
+            __options.with = options.with.slice();
             __options = DSUtils._(relationDef, __options);
             DSUtils.remove(__options.with, containedName);
             DSUtils.forEach(__options.with, (relation, i) => {
               if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
                 __options.with[i] = relation.substr(containedName.length + 1);
+              } else {
+                __options.with[i] = '';
               }
             });
 
