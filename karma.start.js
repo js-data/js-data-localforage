@@ -1,5 +1,9 @@
 // Setup global test variables
-var dsLocalForageAdapter, User, datastore;
+var dsLocalForageAdapter, Profile, User, Post, Comment, datastore;
+
+assert.equalObjects = function (a, b, m) {
+  assert.deepEqual(JSON.parse(JSON.stringify(a)), JSON.parse(JSON.stringify(b)), m || 'Objects should be equal!');
+};
 
 // Helper globals
 var fail = function (msg) {
@@ -50,7 +54,58 @@ beforeEach(function (done) {
 
     datastore = new JSData.DS();
 
-    User = datastore.defineResource('user');
+    Profile = datastore.defineResource({
+      name: 'profile'
+    });
+    User = datastore.defineResource({
+      name: 'user',
+      relations: {
+        hasMany: {
+          post: {
+            localField: 'posts',
+            foreignKey: 'post'
+          }
+        },
+        hasOne: {
+          profile: {
+            localField: 'profile',
+            localKey: 'profileId'
+          }
+        }
+      }
+    });
+    Post = datastore.defineResource({
+      name: 'post',
+      relations: {
+        belongsTo: {
+          user: {
+            localField: 'user',
+            localKey: 'userId'
+          }
+        },
+        hasMany: {
+          comment: {
+            localField: 'comments',
+            foreignKey: 'postId'
+          }
+        }
+      }
+    });
+    Comment = datastore.defineResource({
+      name: 'comment',
+      relations: {
+        belongsTo: {
+          post: {
+            localField: 'post',
+            localKey: 'postId'
+          },
+          user: {
+            localField: 'user',
+            localKey: 'userId'
+          }
+        }
+      }
+    });
     dsLocalForageAdapter = new DSLocalForageAdapter();
 
     done();

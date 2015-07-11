@@ -1,6 +1,6 @@
 /*!
  * js-data-localforage
- * @version 2.0.1 - Homepage <http://www.js-data.io/docs/dslocalforageadapter>
+ * @version 2.1.0 - Homepage <http://www.js-data.io/docs/dslocalforageadapter>
  * @author Jason Dobry <jason.dobry@gmail.com>
  * @copyright (c) 2014-2015 Jason Dobry 
  * @license MIT <https://github.com/js-data/js-data-localforage/blob/master/LICENSE>
@@ -65,20 +65,18 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+	function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 	var JSData = __webpack_require__(1);
 	var localforage = __webpack_require__(2);
 	var guid = __webpack_require__(3);
+	var unique = __webpack_require__(4);
+	var map = __webpack_require__(5);
 
 	var emptyStore = new JSData.DS();
 	var DSUtils = JSData.DSUtils;
-	var keys = DSUtils.keys;
-	var omit = DSUtils.omit;
-	var makePath = DSUtils.makePath;
-	var deepMixIn = DSUtils.deepMixIn;
-	var forEach = DSUtils.forEach;
-	var removeCircular = DSUtils.removeCircular;
 
 	var filter = emptyStore.defaults.defaultFilter;
 
@@ -129,19 +127,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function DSLocalForageAdapter(options) {
 	    _classCallCheck(this, DSLocalForageAdapter);
 
+	    options = options || {};
 	    this.defaults = new Defaults();
-	    deepMixIn(this.defaults, options);
+	    DSUtils.deepMixIn(this.defaults, options);
 	  }
 
 	  _createClass(DSLocalForageAdapter, [{
 	    key: 'getPath',
 	    value: function getPath(resourceConfig, options) {
-	      return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.name);
+	      return DSUtils.makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.name);
 	    }
 	  }, {
 	    key: 'getIdPath',
 	    value: function getIdPath(resourceConfig, options, id) {
-	      return makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.endpoint, id);
+	      return DSUtils.makePath(options.basePath || this.defaults.basePath || resourceConfig.basePath, resourceConfig.endpoint, id);
 	    }
 	  }, {
 	    key: 'getIds',
@@ -215,10 +214,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, {
 	    key: 'PUT',
 	    value: function PUT(key, value) {
-	      value = removeCircular(value);
+	      value = DSUtils.removeCircular(value);
 	      return this.GET(key).then(function (item) {
 	        if (item) {
-	          deepMixIn(item, value);
+	          DSUtils.deepMixIn(item, value);
 	        }
 	        return new DSUtils.Promise(function (resolve, reject) {
 	          localforage.setItem(key, item || value, function (err, v) {
@@ -239,17 +238,87 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: function find(resourceConfig, id, options) {
 	      var _this3 = this;
 
-	      return createTask(function (resolve, reject) {
-	        queueTask(function () {
-	          options = options || {};
-	          _this3.GET(_this3.getIdPath(resourceConfig, options, id)).then(function (item) {
-	            if (!item) {
-	              reject(new Error('Not Found!'));
-	            } else {
-	              resolve(item);
-	            }
-	          }, reject);
+	      var instance = undefined;
+	      return new DSUtils.Promise(function (resolve, reject) {
+	        options = options || {};
+	        _this3.GET(_this3.getIdPath(resourceConfig, options, id)).then(function (item) {
+	          if (!item) {
+	            reject(new Error('Not Found!'));
+	          } else {
+	            resolve(item);
+	          }
+	        }, reject);
+	      }).then(function (_instance) {
+	        instance = _instance;
+	        var tasks = [];
+
+	        DSUtils.forEach(resourceConfig.relationList, function (def) {
+	          var relationName = def.relation;
+	          var relationDef = resourceConfig.getResource(relationName);
+	          var containedName = null;
+	          if (DSUtils.contains(options['with'], relationName)) {
+	            containedName = relationName;
+	          } else if (DSUtils.contains(options['with'], def.localField)) {
+	            containedName = def.localField;
+	          }
+	          if (containedName) {
+	            (function () {
+	              var __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
+	              __options = DSUtils._(relationDef, __options);
+	              DSUtils.remove(__options['with'], containedName);
+	              DSUtils.forEach(__options['with'], function (relation, i) {
+	                if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
+	                  __options['with'][i] = relation.substr(containedName.length + 1);
+	                }
+	              });
+
+	              var task = undefined;
+
+	              if ((def.type === 'hasOne' || def.type === 'hasMany') && def.foreignKey) {
+	                task = _this3.findAll(resourceConfig.getResource(relationName), {
+	                  where: _defineProperty({}, def.foreignKey, {
+	                    '==': instance[resourceConfig.idAttribute]
+	                  })
+	                }, __options).then(function (relatedItems) {
+	                  if (def.type === 'hasOne' && relatedItems.length) {
+	                    DSUtils.set(instance, def.localField, relatedItems[0]);
+	                  } else {
+	                    DSUtils.set(instance, def.localField, relatedItems);
+	                  }
+	                  return relatedItems;
+	                });
+	              } else if (def.type === 'hasMany' && def.localKeys) {
+	                var localKeys = [];
+	                var itemKeys = instance[def.localKeys] || [];
+	                itemKeys = Array.isArray(itemKeys) ? itemKeys : DSUtils.keys(itemKeys);
+	                localKeys = localKeys.concat(itemKeys || []);
+	                task = _this3.findAll(resourceConfig.getResource(relationName), {
+	                  where: _defineProperty({}, relationDef.idAttribute, {
+	                    'in': DSUtils.filter(unique(localKeys), function (x) {
+	                      return x;
+	                    })
+	                  })
+	                }, __options).then(function (relatedItems) {
+	                  DSUtils.set(instance, def.localField, relatedItems);
+	                  return relatedItems;
+	                });
+	              } else if (def.type === 'belongsTo' || def.type === 'hasOne' && def.localKey) {
+	                task = _this3.find(resourceConfig.getResource(relationName), DSUtils.get(instance, def.localKey), __options).then(function (relatedItem) {
+	                  DSUtils.set(instance, def.localField, relatedItem);
+	                  return relatedItem;
+	                });
+	              }
+
+	              if (task) {
+	                tasks.push(task);
+	              }
+	            })();
+	          }
 	        });
+
+	        return DSUtils.Promise.all(tasks);
+	      }).then(function () {
+	        return instance;
 	      });
 	    }
 	  }, {
@@ -257,23 +326,131 @@ return /******/ (function(modules) { // webpackBootstrap
 	    value: function findAll(resourceConfig, params, options) {
 	      var _this4 = this;
 
-	      return createTask(function (resolve, reject) {
-	        queueTask(function () {
-	          options = options || {};
-	          _this4.getIds(resourceConfig, options).then(function (ids) {
-	            var idsArray = keys(ids);
-	            if (!('allowSimpleWhere' in options)) {
-	              options.allowSimpleWhere = true;
-	            }
-	            var tasks = [];
-	            forEach(idsArray, function (id) {
-	              tasks.push(_this4.GET(_this4.getIdPath(resourceConfig, options, id)));
-	            });
-	            return DSUtils.Promise.all(tasks);
-	          }).then(function (items) {
-	            return filter.call(emptyStore, items, resourceConfig.name, params, options);
-	          }).then(resolve, reject);
+	      var items = null;
+	      return new DSUtils.Promise(function (resolve, reject) {
+	        options = options || {};
+	        _this4.getIds(resourceConfig, options).then(function (ids) {
+	          var idsArray = DSUtils.keys(ids);
+	          if (!('allowSimpleWhere' in options)) {
+	            options.allowSimpleWhere = true;
+	          }
+	          var tasks = [];
+	          DSUtils.forEach(idsArray, function (id) {
+	            tasks.push(_this4.GET(_this4.getIdPath(resourceConfig, options, id)));
+	          });
+	          return DSUtils.Promise.all(tasks);
+	        }).then(function (items) {
+	          return filter.call(emptyStore, items, resourceConfig.name, params, options);
+	        }).then(resolve, reject);
+	      }).then(function (_items) {
+	        items = _items;
+	        var tasks = [];
+	        DSUtils.forEach(resourceConfig.relationList, function (def) {
+	          var relationName = def.relation;
+	          var relationDef = resourceConfig.getResource(relationName);
+	          var containedName = null;
+	          if (DSUtils.contains(options['with'], relationName)) {
+	            containedName = relationName;
+	          } else if (DSUtils.contains(options['with'], def.localField)) {
+	            containedName = def.localField;
+	          }
+	          if (containedName) {
+	            (function () {
+	              var __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
+	              __options = DSUtils._(relationDef, __options);
+	              DSUtils.remove(__options['with'], containedName);
+	              DSUtils.forEach(__options['with'], function (relation, i) {
+	                if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
+	                  __options['with'][i] = relation.substr(containedName.length + 1);
+	                }
+	              });
+
+	              var task = undefined;
+
+	              if ((def.type === 'hasOne' || def.type === 'hasMany') && def.foreignKey) {
+	                task = _this4.findAll(resourceConfig.getResource(relationName), {
+	                  where: _defineProperty({}, def.foreignKey, {
+	                    'in': DSUtils.filter(map(items, function (item) {
+	                      return DSUtils.get(item, resourceConfig.idAttribute);
+	                    }), function (x) {
+	                      return x;
+	                    })
+	                  })
+	                }, __options).then(function (relatedItems) {
+	                  DSUtils.forEach(items, function (item) {
+	                    var attached = [];
+	                    DSUtils.forEach(relatedItems, function (relatedItem) {
+	                      if (DSUtils.get(relatedItem, def.foreignKey) === item[resourceConfig.idAttribute]) {
+	                        attached.push(relatedItem);
+	                      }
+	                    });
+	                    if (def.type === 'hasOne' && attached.length) {
+	                      DSUtils.set(item, def.localField, attached[0]);
+	                    } else {
+	                      DSUtils.set(item, def.localField, attached);
+	                    }
+	                  });
+	                  return relatedItems;
+	                });
+	              } else if (def.type === 'hasMany' && def.localKeys) {
+	                (function () {
+	                  var localKeys = [];
+	                  DSUtils.forEach(items, function (item) {
+	                    var itemKeys = item[def.localKeys] || [];
+	                    itemKeys = Array.isArray(itemKeys) ? itemKeys : DSUtils.keys(itemKeys);
+	                    localKeys = localKeys.concat(itemKeys || []);
+	                  });
+	                  task = _this4.findAll(resourceConfig.getResource(relationName), {
+	                    where: _defineProperty({}, relationDef.idAttribute, {
+	                      'in': DSUtils.filter(unique(localKeys), function (x) {
+	                        return x;
+	                      })
+	                    })
+	                  }, __options).then(function (relatedItems) {
+	                    DSUtils.forEach(items, function (item) {
+	                      var attached = [];
+	                      var itemKeys = item[def.localKeys] || [];
+	                      itemKeys = Array.isArray(itemKeys) ? itemKeys : DSUtils.keys(itemKeys);
+	                      DSUtils.forEach(relatedItems, function (relatedItem) {
+	                        if (itemKeys && DSUtils.contains(itemKeys, relatedItem[relationDef.idAttribute])) {
+	                          attached.push(relatedItem);
+	                        }
+	                      });
+	                      DSUtils.set(item, def.localField, attached);
+	                    });
+	                    return relatedItems;
+	                  });
+	                })();
+	              } else if (def.type === 'belongsTo' || def.type === 'hasOne' && def.localKey) {
+	                task = _this4.findAll(resourceConfig.getResource(relationName), {
+	                  where: _defineProperty({}, relationDef.idAttribute, {
+	                    'in': DSUtils.filter(map(items, function (item) {
+	                      return DSUtils.get(item, def.localKey);
+	                    }), function (x) {
+	                      return x;
+	                    })
+	                  })
+	                }, __options).then(function (relatedItems) {
+	                  DSUtils.forEach(items, function (item) {
+	                    DSUtils.forEach(relatedItems, function (relatedItem) {
+	                      if (relatedItem[relationDef.idAttribute] === item[def.localKey]) {
+	                        DSUtils.set(item, def.localField, relatedItem);
+	                      }
+	                    });
+	                  });
+	                  return relatedItems;
+	                });
+	              }
+
+	              if (task) {
+	                tasks.push(task);
+	              }
+	            })();
+	          }
 	        });
+	        return DSUtils.Promise.all(tasks);
+	      }).then(function () {
+	        return items;
 	      });
 	    }
 	  }, {
@@ -286,7 +463,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          var i = undefined;
 	          attrs[resourceConfig.idAttribute] = attrs[resourceConfig.idAttribute] || guid();
 	          options = options || {};
-	          _this5.PUT(makePath(_this5.getIdPath(resourceConfig, options, attrs[resourceConfig.idAttribute])), omit(attrs, resourceConfig.relationFields || [])).then(function (item) {
+	          _this5.PUT(DSUtils.makePath(_this5.getIdPath(resourceConfig, options, attrs[resourceConfig.idAttribute])), DSUtils.omit(attrs, resourceConfig.relationFields || [])).then(function (item) {
 	            i = item;
 	            return _this5.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
 	          }).then(function () {
@@ -304,7 +481,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        queueTask(function () {
 	          var i = undefined;
 	          options = options || {};
-	          _this6.PUT(_this6.getIdPath(resourceConfig, options, id), omit(attrs, resourceConfig.relationFields || [])).then(function (item) {
+	          _this6.PUT(_this6.getIdPath(resourceConfig, options, id), DSUtils.omit(attrs, resourceConfig.relationFields || [])).then(function (item) {
 	            i = item;
 	            return _this6.ensureId(item[resourceConfig.idAttribute], resourceConfig, options);
 	          }).then(function () {
@@ -320,8 +497,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      return this.findAll(resourceConfig, params, options).then(function (items) {
 	        var tasks = [];
-	        forEach(items, function (item) {
-	          tasks.push(_this7.update(resourceConfig, item[resourceConfig.idAttribute], omit(attrs, resourceConfig.relationFields || []), options));
+	        DSUtils.forEach(items, function (item) {
+	          tasks.push(_this7.update(resourceConfig, item[resourceConfig.idAttribute], DSUtils.omit(attrs, resourceConfig.relationFields || []), options));
 	        });
 	        return DSUtils.Promise.all(tasks);
 	      });
@@ -349,7 +526,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	      return this.findAll(resourceConfig, params, options).then(function (items) {
 	        var tasks = [];
-	        forEach(items, function (item) {
+	        DSUtils.forEach(items, function (item) {
 	          tasks.push(_this9.destroy(resourceConfig, item[resourceConfig.idAttribute], options));
 	        });
 	        return DSUtils.Promise.all(tasks);
@@ -378,8 +555,8 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var randHex = __webpack_require__(4);
-	var choice = __webpack_require__(5);
+	var randHex = __webpack_require__(6);
+	var choice = __webpack_require__(7);
 
 	  /**
 	   * Returns pseudo-random guid (UUID v4)
@@ -408,7 +585,66 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var choice = __webpack_require__(5);
+	var filter = __webpack_require__(8);
+
+	    /**
+	     * @return {array} Array of unique items
+	     */
+	    function unique(arr, compare){
+	        compare = compare || isEqual;
+	        return filter(arr, function(item, i, arr){
+	            var n = arr.length;
+	            while (++i < n) {
+	                if ( compare(item, arr[i]) ) {
+	                    return false;
+	                }
+	            }
+	            return true;
+	        });
+	    }
+
+	    function isEqual(a, b){
+	        return a === b;
+	    }
+
+	    module.exports = unique;
+
+
+
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var makeIterator = __webpack_require__(9);
+
+	    /**
+	     * Array map
+	     */
+	    function map(arr, callback, thisObj) {
+	        callback = makeIterator(callback, thisObj);
+	        var results = [];
+	        if (arr == null){
+	            return results;
+	        }
+
+	        var i = -1, len = arr.length;
+	        while (++i < len) {
+	            results[i] = callback(arr[i], i, arr);
+	        }
+
+	        return results;
+	    }
+
+	     module.exports = map;
+
+
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var choice = __webpack_require__(7);
 
 	    var _chars = '0123456789abcdef'.split('');
 
@@ -430,11 +666,11 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 5 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var randInt = __webpack_require__(6);
-	var isArray = __webpack_require__(7);
+	var randInt = __webpack_require__(10);
+	var isArray = __webpack_require__(11);
 
 	    /**
 	     * Returns a random element from the supplied arguments
@@ -451,12 +687,84 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 6 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var MIN_INT = __webpack_require__(8);
-	var MAX_INT = __webpack_require__(9);
-	var rand = __webpack_require__(10);
+	var makeIterator = __webpack_require__(9);
+
+	    /**
+	     * Array filter
+	     */
+	    function filter(arr, callback, thisObj) {
+	        callback = makeIterator(callback, thisObj);
+	        var results = [];
+	        if (arr == null) {
+	            return results;
+	        }
+
+	        var i = -1, len = arr.length, value;
+	        while (++i < len) {
+	            value = arr[i];
+	            if (callback(value, i, arr)) {
+	                results.push(value);
+	            }
+	        }
+
+	        return results;
+	    }
+
+	    module.exports = filter;
+
+
+
+
+/***/ },
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var identity = __webpack_require__(12);
+	var prop = __webpack_require__(13);
+	var deepMatches = __webpack_require__(14);
+
+	    /**
+	     * Converts argument into a valid iterator.
+	     * Used internally on most array/object/collection methods that receives a
+	     * callback/iterator providing a shortcut syntax.
+	     */
+	    function makeIterator(src, thisObj){
+	        if (src == null) {
+	            return identity;
+	        }
+	        switch(typeof src) {
+	            case 'function':
+	                // function is the first to improve perf (most common case)
+	                // also avoid using `Function#call` if not needed, which boosts
+	                // perf a lot in some cases
+	                return (typeof thisObj !== 'undefined')? function(val, i, arr){
+	                    return src.call(thisObj, val, i, arr);
+	                } : src;
+	            case 'object':
+	                return function(val){
+	                    return deepMatches(val, src);
+	                };
+	            case 'string':
+	            case 'number':
+	                return prop(src);
+	        }
+	    }
+
+	    module.exports = makeIterator;
+
+
+
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var MIN_INT = __webpack_require__(15);
+	var MAX_INT = __webpack_require__(16);
+	var rand = __webpack_require__(17);
 
 	    /**
 	     * Gets random integer inside range or snap to min/max values.
@@ -475,10 +783,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 7 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var isKind = __webpack_require__(11);
+	var isKind = __webpack_require__(18);
 	    /**
 	     */
 	    var isArray = Array.isArray || function (val) {
@@ -489,7 +797,106 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 8 */
+/* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	
+
+	    /**
+	     * Returns the first argument provided to it.
+	     */
+	    function identity(val){
+	        return val;
+	    }
+
+	    module.exports = identity;
+
+
+
+
+/***/ },
+/* 13 */
+/***/ function(module, exports, __webpack_require__) {
+
+	
+
+	    /**
+	     * Returns a function that gets a property of the passed object
+	     */
+	    function prop(name){
+	        return function(obj){
+	            return obj[name];
+	        };
+	    }
+
+	    module.exports = prop;
+
+
+
+
+/***/ },
+/* 14 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var forOwn = __webpack_require__(19);
+	var isArray = __webpack_require__(11);
+
+	    function containsMatch(array, pattern) {
+	        var i = -1, length = array.length;
+	        while (++i < length) {
+	            if (deepMatches(array[i], pattern)) {
+	                return true;
+	            }
+	        }
+
+	        return false;
+	    }
+
+	    function matchArray(target, pattern) {
+	        var i = -1, patternLength = pattern.length;
+	        while (++i < patternLength) {
+	            if (!containsMatch(target, pattern[i])) {
+	                return false;
+	            }
+	        }
+
+	        return true;
+	    }
+
+	    function matchObject(target, pattern) {
+	        var result = true;
+	        forOwn(pattern, function(val, key) {
+	            if (!deepMatches(target[key], val)) {
+	                // Return false to break out of forOwn early
+	                return (result = false);
+	            }
+	        });
+
+	        return result;
+	    }
+
+	    /**
+	     * Recursively check if the objects match.
+	     */
+	    function deepMatches(target, pattern){
+	        if (target && typeof target === 'object') {
+	            if (isArray(target) && isArray(pattern)) {
+	                return matchArray(target, pattern);
+	            } else {
+	                return matchObject(target, pattern);
+	            }
+	        } else {
+	            return target === pattern;
+	        }
+	    }
+
+	    module.exports = deepMatches;
+
+
+
+
+/***/ },
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -501,7 +908,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 9 */
+/* 16 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -513,12 +920,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 10 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var random = __webpack_require__(12);
-	var MIN_INT = __webpack_require__(8);
-	var MAX_INT = __webpack_require__(9);
+	var random = __webpack_require__(20);
+	var MIN_INT = __webpack_require__(15);
+	var MAX_INT = __webpack_require__(16);
 
 	    /**
 	     * Returns random number inside range
@@ -534,10 +941,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 11 */
+/* 18 */
 /***/ function(module, exports, __webpack_require__) {
 
-	var kindOf = __webpack_require__(13);
+	var kindOf = __webpack_require__(21);
 	    /**
 	     * Check if value is from a specific "kind".
 	     */
@@ -549,7 +956,32 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 12 */
+/* 19 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var hasOwn = __webpack_require__(22);
+	var forIn = __webpack_require__(23);
+
+	    /**
+	     * Similar to Array/forEach but works over object properties and fixes Don't
+	     * Enum bug on IE.
+	     * based on: http://whattheheadsaid.com/2010/10/a-safer-object-keys-compatibility-implementation
+	     */
+	    function forOwn(obj, fn, thisObj){
+	        forIn(obj, function(val, key){
+	            if (hasOwn(obj, key)) {
+	                return fn.call(thisObj, obj[key], key, obj);
+	            }
+	        });
+	    }
+
+	    module.exports = forOwn;
+
+
+
+
+/***/ },
+/* 20 */
 /***/ function(module, exports, __webpack_require__) {
 
 	
@@ -573,7 +1005,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 13 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	
@@ -595,6 +1027,106 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	    }
 	    module.exports = kindOf;
+
+
+
+/***/ },
+/* 22 */
+/***/ function(module, exports, __webpack_require__) {
+
+	
+
+	    /**
+	     * Safer Object.hasOwnProperty
+	     */
+	     function hasOwn(obj, prop){
+	         return Object.prototype.hasOwnProperty.call(obj, prop);
+	     }
+
+	     module.exports = hasOwn;
+
+
+
+
+/***/ },
+/* 23 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var hasOwn = __webpack_require__(22);
+
+	    var _hasDontEnumBug,
+	        _dontEnums;
+
+	    function checkDontEnum(){
+	        _dontEnums = [
+	                'toString',
+	                'toLocaleString',
+	                'valueOf',
+	                'hasOwnProperty',
+	                'isPrototypeOf',
+	                'propertyIsEnumerable',
+	                'constructor'
+	            ];
+
+	        _hasDontEnumBug = true;
+
+	        for (var key in {'toString': null}) {
+	            _hasDontEnumBug = false;
+	        }
+	    }
+
+	    /**
+	     * Similar to Array/forEach but works over object properties and fixes Don't
+	     * Enum bug on IE.
+	     * based on: http://whattheheadsaid.com/2010/10/a-safer-object-keys-compatibility-implementation
+	     */
+	    function forIn(obj, fn, thisObj){
+	        var key, i = 0;
+	        // no need to check if argument is a real object that way we can use
+	        // it for arrays, functions, date, etc.
+
+	        //post-pone check till needed
+	        if (_hasDontEnumBug == null) checkDontEnum();
+
+	        for (key in obj) {
+	            if (exec(fn, obj, key, thisObj) === false) {
+	                break;
+	            }
+	        }
+
+
+	        if (_hasDontEnumBug) {
+	            var ctor = obj.constructor,
+	                isProto = !!ctor && obj === ctor.prototype;
+
+	            while (key = _dontEnums[i++]) {
+	                // For constructor, if it is a prototype object the constructor
+	                // is always non-enumerable unless defined otherwise (and
+	                // enumerated above).  For non-prototype objects, it will have
+	                // to be defined on this object, since it cannot be defined on
+	                // any prototype objects.
+	                //
+	                // For other [[DontEnum]] properties, check if the value is
+	                // different than Object prototype value.
+	                if (
+	                    (key !== 'constructor' ||
+	                        (!isProto && hasOwn(obj, key))) &&
+	                    obj[key] !== Object.prototype[key]
+	                ) {
+	                    if (exec(fn, obj, key, thisObj) === false) {
+	                        break;
+	                    }
+	                }
+	            }
+	        }
+	    }
+
+	    function exec(fn, obj, key, thisObj){
+	        return fn.call(thisObj, obj[key], key, obj);
+	    }
+
+	    module.exports = forIn;
+
 
 
 
