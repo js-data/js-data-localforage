@@ -1,6 +1,6 @@
 <img src="https://raw.githubusercontent.com/js-data/js-data/master/js-data.png" alt="js-data logo" title="js-data" align="right" width="64" height="64" />
 
-## js-data-localforage [![bower version](https://img.shields.io/bower/v/js-data-localforage.svg?style=flat-square)](https://www.npmjs.org/package/js-data-localforage) [![npm version](https://img.shields.io/npm/v/js-data-localforage.svg?style=flat-square)](https://www.npmjs.org/package/js-data-localforage) [![Circle CI](https://img.shields.io/circleci/project/js-data/js-data-localforage/master.svg?style=flat-square)](https://circleci.com/gh/js-data/js-data-localforage/tree/master) [![npm downloads](https://img.shields.io/npm/dm/js-data-localforage.svg?style=flat-square)](https://www.npmjs.org/package/js-data-localforage) [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/js-data/js-data-localforage/blob/master/LICENSE)
+## js-data-localforage [![Slack Status](http://slack.js-data.io/badge.svg)](http://slack.js-data.io) [![npm version](https://img.shields.io/npm/v/js-data-localforage.svg?style=flat)](https://www.npmjs.org/package/js-data-localforage) [![Circle CI](https://img.shields.io/circleci/project/js-data/js-data-localforage/master.svg?style=flat)](https://circleci.com/gh/js-data/js-data-localforage/tree/master) [![npm downloads](https://img.shields.io/npm/dm/js-data-localforage.svg?style=flat)](https://www.npmjs.org/package/js-data-localforage) [![Coverage Status](https://img.shields.io/coveralls/js-data/js-data-localforage/master.svg?style=flat)](https://coveralls.io/github/js-data/js-data-localforage?branch=master)
 
 localforage adapter for [js-data](http://www.js-data.io/).
 
@@ -9,18 +9,6 @@ localforage adapter for [js-data](http://www.js-data.io/).
 
 ### Demo
 [https://js-data-localforage.firebaseapp.com/](https://js-data-localforage.firebaseapp.com/)
-
-### Project Status
-
-__Latest Release:__ [![Latest Release](https://img.shields.io/github/release/js-data/js-data-localforage.svg?style=flat-square)](https://github.com/js-data/js-data-localforage/releases)
-
-__Status:__
-
-[![Dependency Status](https://img.shields.io/gemnasium/js-data/js-data-localforage.svg?style=flat-square)](https://gemnasium.com/js-data/js-data-localforage) [![Coverage Status](https://img.shields.io/coveralls/js-data/js-data-localforage/master.svg?style=flat-square)](https://coveralls.io/r/js-data/js-data-localforage?branch=master) [![Codacity](https://img.shields.io/codacy/bb1761a8dcf14dd8a20111fd774e32ec.svg?style=flat-square)](https://www.codacy.com/public/jasondobry/js-data-localforage/dashboard)
-
-__Supported Platforms:__
-
-[![browsers](https://img.shields.io/badge/Browser-Chrome%2CFirefox%2CSafari%2COpera%2CIE%209%2B%2CiOS%20Safari%207.1%2B%2CAndroid%20Browser%202.3%2B-green.svg?style=flat-square)](https://github.com/js-data/js-data)
 
 ### Quick Start
 `bower install --save localforage js-data js-data-localforage` or `npm install --save localforage js-data js-data-localforage`.
@@ -42,7 +30,7 @@ store.registerAdapter('lf', adapter, { default: true });
 [CHANGELOG.md](https://github.com/js-data/js-data-localforage/blob/master/CHANGELOG.md)
 
 ### Community
-- [Gitter Channel](https://gitter.im/js-data/js-data) - Better than IRC!
+- [Slack Channel](http://slack.js-data.io) - Better than IRC!
 - [Announcements](http://www.js-data.io/blog)
 - [Mailing List](https://groups.io/org/groupsio/jsdata) - Ask your questions!
 - [Issues](https://github.com/js-data/js-data-localforage/issues) - Found a bug? Feature request? Submit an issue!
@@ -51,7 +39,7 @@ store.registerAdapter('lf', adapter, { default: true });
 
 ### Contributing
 
-First, support is handled via the [Mailing List](https://groups.io/org/groupsio/jsdata). Ask your questions there.
+First, support is handled via the [Slack channel](http://slack.js-data.io) or [Mailing List](https://groups.io/org/groupsio/jsdata). Ask your questions there.
 
 When submitting issues on GitHub, please include as much detail as possible to make debugging quick and easy.
 
