@@ -68,36 +68,19 @@ class DSLocalForageAdapter {
 
   getIds(resourceConfig, options) {
     let idsPath = this.getPath(resourceConfig, options);
-    return new DSUtils.Promise((resolve, reject) => {
-      localforage.getItem(idsPath, (err, ids) => {
-        if (err) {
-          return reject(err);
-        } else if (ids) {
-          return resolve(ids);
-        } else {
-          return localforage.setItem(idsPath, {}, (err, v) => {
-            if (err) {
-              reject(err);
-            } else {
-              resolve(v);
-            }
-          });
-        }
-      });
+    return localforage.getItem(idsPath).then((ids) => {
+      if (ids) {
+        return ids;
+      }
+      else {
+        return localforage.setItem(idsPath, {});
+      }
     });
   }
 
   saveKeys(ids, resourceConfig, options) {
     let keysPath = this.getPath(resourceConfig, options);
-    return new DSUtils.Promise((resolve, reject) => {
-      localforage.setItem(keysPath, ids, (err, v) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(v);
-        }
-      });
-    });
+    return localforage.setItem(keysPath, ids);
   }
 
   ensureId(id, resourceConfig, options) {
@@ -115,15 +98,7 @@ class DSLocalForageAdapter {
   }
 
   GET(key) {
-    return new DSUtils.Promise((resolve, reject) => {
-      localforage.getItem(key, (err, v) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(v);
-        }
-      });
-    });
+    return localforage.getItem(key);
   }
 
   PUT(key, value) {
@@ -132,224 +107,218 @@ class DSLocalForageAdapter {
       if (item) {
         DSUtils.deepMixIn(item, value);
       }
-      return new DSUtils.Promise((resolve, reject) => {
-        localforage.setItem(key, item || value, (err, v) => err ? reject(err) : resolve(v));
-      });
+      return localforage.setItem(key, item || value);
     });
   }
 
   DEL(key) {
-    return new DSUtils.Promise(resolve => localforage.removeItem(key, resolve));
+    return localforage.removeItem(key);
   }
 
   find(resourceConfig, id, options) {
     let instance;
-    return new DSUtils.Promise((resolve, reject) => {
-      options = options || {};
-      options.with = options.with || [];
-      this.GET(this.getIdPath(resourceConfig, options, id)).then(item => {
-        if (!item) {
-          reject(new Error('Not Found!'));
-        } else {
-          resolve(item);
-        }
-      }, reject);
+    options = options || {};
+    options.with = options.with || [];
+    return this.GET(this.getIdPath(resourceConfig, options, id)).then(item => {
+      if (!item) {
+        return DSUtils.Promise.reject(new Error('Not Found!'));
+      } else {
+        return item;
+      }
     }).then(_instance => {
-        instance = _instance;
-        let tasks = [];
+      instance = _instance;
+      let tasks = [];
 
-        DSUtils.forEach(resourceConfig.relationList, def => {
-          let relationName = def.relation;
-          let relationDef = resourceConfig.getResource(relationName);
-          let containedName = null;
-          if (DSUtils.contains(options.with, relationName)) {
-            containedName = relationName;
-          } else if (DSUtils.contains(options.with, def.localField)) {
-            containedName = def.localField;
-          }
-          if (containedName) {
-            let __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
-            __options.with = options.with.slice();
-            __options = DSUtils._(relationDef, __options);
-            DSUtils.remove(__options.with, containedName);
-            DSUtils.forEach(__options.with, (relation, i) => {
-              if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
-                __options.with[i] = relation.substr(containedName.length + 1);
-              } else {
-                __options.with[i] = '';
+      DSUtils.forEach(resourceConfig.relationList, def => {
+        let relationName = def.relation;
+        let relationDef = resourceConfig.getResource(relationName);
+        let containedName = null;
+        if (DSUtils.contains(options.with, relationName)) {
+          containedName = relationName;
+        } else if (DSUtils.contains(options.with, def.localField)) {
+          containedName = def.localField;
+        }
+        if (containedName) {
+          let __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
+          __options.with = options.with.slice();
+          __options = DSUtils._(relationDef, __options);
+          DSUtils.remove(__options.with, containedName);
+          DSUtils.forEach(__options.with, (relation, i) => {
+            if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
+              __options.with[i] = relation.substr(containedName.length + 1);
+            } else {
+              __options.with[i] = '';
+            }
+          });
+
+          let task;
+
+          if ((def.type === 'hasOne' || def.type === 'hasMany') && def.foreignKey) {
+            task = this.findAll(resourceConfig.getResource(relationName), {
+              where: {
+                [def.foreignKey]: {
+                  '==': instance[resourceConfig.idAttribute]
+                }
               }
-            });
-
-            let task;
-
-            if ((def.type === 'hasOne' || def.type === 'hasMany') && def.foreignKey) {
-              task = this.findAll(resourceConfig.getResource(relationName), {
-                where: {
-                  [def.foreignKey]: {
-                    '==': instance[resourceConfig.idAttribute]
-                  }
-                }
-              }, __options).then(relatedItems => {
-                if (def.type === 'hasOne' && relatedItems.length) {
-                  DSUtils.set(instance, def.localField, relatedItems[0]);
-                } else {
-                  DSUtils.set(instance, def.localField, relatedItems);
-                }
-                return relatedItems;
-              });
-            } else if (def.type === 'hasMany' && def.localKeys) {
-              let localKeys = [];
-              let itemKeys = instance[def.localKeys] || [];
-              itemKeys = Array.isArray(itemKeys) ? itemKeys : DSUtils.keys(itemKeys);
-              localKeys = localKeys.concat(itemKeys || []);
-              task = this.findAll(resourceConfig.getResource(relationName), {
-                where: {
-                  [relationDef.idAttribute]: {
-                    'in': DSUtils.filter(unique(localKeys), x => x)
-                  }
-                }
-              }, __options).then(relatedItems => {
+            }, __options).then(relatedItems => {
+              if (def.type === 'hasOne' && relatedItems.length) {
+                DSUtils.set(instance, def.localField, relatedItems[0]);
+              } else {
                 DSUtils.set(instance, def.localField, relatedItems);
-                return relatedItems;
-              });
-            } else if (def.type === 'belongsTo' || (def.type === 'hasOne' && def.localKey)) {
-              task = this.find(resourceConfig.getResource(relationName), DSUtils.get(instance, def.localKey), __options).then(relatedItem => {
-                DSUtils.set(instance, def.localField, relatedItem);
-                return relatedItem;
-              });
-            }
-
-            if (task) {
-              tasks.push(task);
-            }
+              }
+              return relatedItems;
+            });
+          } else if (def.type === 'hasMany' && def.localKeys) {
+            let localKeys = [];
+            let itemKeys = instance[def.localKeys] || [];
+            itemKeys = Array.isArray(itemKeys) ? itemKeys : DSUtils.keys(itemKeys);
+            localKeys = localKeys.concat(itemKeys || []);
+            task = this.findAll(resourceConfig.getResource(relationName), {
+              where: {
+                [relationDef.idAttribute]: {
+                  'in': DSUtils.filter(unique(localKeys), x => x)
+                }
+              }
+            }, __options).then(relatedItems => {
+              DSUtils.set(instance, def.localField, relatedItems);
+              return relatedItems;
+            });
+          } else if (def.type === 'belongsTo' || (def.type === 'hasOne' && def.localKey)) {
+            task = this.find(resourceConfig.getResource(relationName), DSUtils.get(instance, def.localKey), __options).then(relatedItem => {
+              DSUtils.set(instance, def.localField, relatedItem);
+              return relatedItem;
+            });
           }
-        });
 
-        return DSUtils.Promise.all(tasks);
-      }).then(() => instance);
+          if (task) {
+            tasks.push(task);
+          }
+        }
+      });
+
+      return DSUtils.Promise.all(tasks);
+    }).then(() => instance);
   }
 
   findAll(resourceConfig, params, options) {
     let items = null;
-    return new DSUtils.Promise((resolve, reject) => {
-      options = options || {};
-      options.with = options.with || [];
-      this.getIds(resourceConfig, options).then(ids => {
-        let idsArray = DSUtils.keys(ids);
-        if (!('allowSimpleWhere' in options)) {
-          options.allowSimpleWhere = true;
-        }
-        let tasks = [];
-        DSUtils.forEach(idsArray, id => {
-          tasks.push(this.GET(this.getIdPath(resourceConfig, options, id)));
-        });
-        return DSUtils.Promise.all(tasks);
-      }).then(items => {
-        return filter.call(emptyStore, items, resourceConfig.name, params, options);
-      }).then(resolve, reject);
+    options = options || {};
+    options.with = options.with || [];
+    return this.getIds(resourceConfig, options).then(ids => {
+      let idsArray = DSUtils.keys(ids);
+      if (!('allowSimpleWhere' in options)) {
+        options.allowSimpleWhere = true;
+      }
+      let tasks = [];
+      DSUtils.forEach(idsArray, id => {
+        tasks.push(this.GET(this.getIdPath(resourceConfig, options, id)));
+      });
+      return DSUtils.Promise.all(tasks);
+    }).then(items => {
+      return filter.call(emptyStore, items, resourceConfig.name, params, options);
     }).then(_items => {
-        items = _items;
-        let tasks = [];
-        DSUtils.forEach(resourceConfig.relationList, def => {
-          let relationName = def.relation;
-          let relationDef = resourceConfig.getResource(relationName);
-          let containedName = null;
-          if (DSUtils.contains(options.with, relationName)) {
-            containedName = relationName;
-          } else if (DSUtils.contains(options.with, def.localField)) {
-            containedName = def.localField;
-          }
-          if (containedName) {
-            let __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
-            __options.with = options.with.slice();
-            __options = DSUtils._(relationDef, __options);
-            DSUtils.remove(__options.with, containedName);
-            DSUtils.forEach(__options.with, (relation, i) => {
-              if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
-                __options.with[i] = relation.substr(containedName.length + 1);
-              } else {
-                __options.with[i] = '';
-              }
-            });
+      items = _items;
+      let tasks = [];
+      DSUtils.forEach(resourceConfig.relationList, def => {
+        let relationName = def.relation;
+        let relationDef = resourceConfig.getResource(relationName);
+        let containedName = null;
+        if (DSUtils.contains(options.with, relationName)) {
+          containedName = relationName;
+        } else if (DSUtils.contains(options.with, def.localField)) {
+          containedName = def.localField;
+        }
+        if (containedName) {
+          let __options = DSUtils.deepMixIn({}, options.orig ? options.orig() : options);
+          __options.with = options.with.slice();
+          __options = DSUtils._(relationDef, __options);
+          DSUtils.remove(__options.with, containedName);
+          DSUtils.forEach(__options.with, (relation, i) => {
+            if (relation && relation.indexOf(containedName) === 0 && relation.length >= containedName.length && relation[containedName.length] === '.') {
+              __options.with[i] = relation.substr(containedName.length + 1);
+            } else {
+              __options.with[i] = '';
+            }
+          });
 
-            let task;
+          let task;
 
-            if ((def.type === 'hasOne' || def.type === 'hasMany') && def.foreignKey) {
-              task = this.findAll(resourceConfig.getResource(relationName), {
-                where: {
-                  [def.foreignKey]: {
-                    'in': DSUtils.filter(map(items, item => DSUtils.get(item, resourceConfig.idAttribute)), x => x)
-                  }
+          if ((def.type === 'hasOne' || def.type === 'hasMany') && def.foreignKey) {
+            task = this.findAll(resourceConfig.getResource(relationName), {
+              where: {
+                [def.foreignKey]: {
+                  'in': DSUtils.filter(map(items, item => DSUtils.get(item, resourceConfig.idAttribute)), x => x)
                 }
-              }, __options).then(relatedItems => {
-                DSUtils.forEach(items, item => {
-                  let attached = [];
-                  DSUtils.forEach(relatedItems, relatedItem => {
-                    if (DSUtils.get(relatedItem, def.foreignKey) === item[resourceConfig.idAttribute]) {
-                      attached.push(relatedItem);
-                    }
-                  });
-                  if (def.type === 'hasOne' && attached.length) {
-                    DSUtils.set(item, def.localField, attached[0]);
-                  } else {
-                    DSUtils.set(item, def.localField, attached);
+              }
+            }, __options).then(relatedItems => {
+              DSUtils.forEach(items, item => {
+                let attached = [];
+                DSUtils.forEach(relatedItems, relatedItem => {
+                  if (DSUtils.get(relatedItem, def.foreignKey) === item[resourceConfig.idAttribute]) {
+                    attached.push(relatedItem);
                   }
                 });
-                return relatedItems;
+                if (def.type === 'hasOne' && attached.length) {
+                  DSUtils.set(item, def.localField, attached[0]);
+                } else {
+                  DSUtils.set(item, def.localField, attached);
+                }
               });
-            } else if (def.type === 'hasMany' && def.localKeys) {
-              let localKeys = [];
+              return relatedItems;
+            });
+          } else if (def.type === 'hasMany' && def.localKeys) {
+            let localKeys = [];
+            DSUtils.forEach(items, item => {
+              let itemKeys = item[def.localKeys] || [];
+              itemKeys = Array.isArray(itemKeys) ? itemKeys : DSUtils.keys(itemKeys);
+              localKeys = localKeys.concat(itemKeys || []);
+            });
+            task = this.findAll(resourceConfig.getResource(relationName), {
+              where: {
+                [relationDef.idAttribute]: {
+                  'in': DSUtils.filter(unique(localKeys), x => x)
+                }
+              }
+            }, __options).then(relatedItems => {
               DSUtils.forEach(items, item => {
+                let attached = [];
                 let itemKeys = item[def.localKeys] || [];
                 itemKeys = Array.isArray(itemKeys) ? itemKeys : DSUtils.keys(itemKeys);
-                localKeys = localKeys.concat(itemKeys || []);
-              });
-              task = this.findAll(resourceConfig.getResource(relationName), {
-                where: {
-                  [relationDef.idAttribute]: {
-                    'in': DSUtils.filter(unique(localKeys), x => x)
+                DSUtils.forEach(relatedItems, relatedItem => {
+                  if (itemKeys && DSUtils.contains(itemKeys, relatedItem[relationDef.idAttribute])) {
+                    attached.push(relatedItem);
                   }
-                }
-              }, __options).then(relatedItems => {
-                DSUtils.forEach(items, item => {
-                  let attached = [];
-                  let itemKeys = item[def.localKeys] || [];
-                  itemKeys = Array.isArray(itemKeys) ? itemKeys : DSUtils.keys(itemKeys);
-                  DSUtils.forEach(relatedItems, relatedItem => {
-                    if (itemKeys && DSUtils.contains(itemKeys, relatedItem[relationDef.idAttribute])) {
-                      attached.push(relatedItem);
-                    }
-                  });
-                  DSUtils.set(item, def.localField, attached);
                 });
-                return relatedItems;
+                DSUtils.set(item, def.localField, attached);
               });
-            } else if (def.type === 'belongsTo' || (def.type === 'hasOne' && def.localKey)) {
-              task = this.findAll(resourceConfig.getResource(relationName), {
-                where: {
-                  [relationDef.idAttribute]: {
-                    'in': DSUtils.filter(map(items, item => DSUtils.get(item, def.localKey)), x => x)
+              return relatedItems;
+            });
+          } else if (def.type === 'belongsTo' || (def.type === 'hasOne' && def.localKey)) {
+            task = this.findAll(resourceConfig.getResource(relationName), {
+              where: {
+                [relationDef.idAttribute]: {
+                  'in': DSUtils.filter(map(items, item => DSUtils.get(item, def.localKey)), x => x)
+                }
+              }
+            }, __options).then(relatedItems => {
+              DSUtils.forEach(items, item => {
+                DSUtils.forEach(relatedItems, relatedItem => {
+                  if (relatedItem[relationDef.idAttribute] === item[def.localKey]) {
+                    DSUtils.set(item, def.localField, relatedItem);
                   }
-                }
-              }, __options).then(relatedItems => {
-                DSUtils.forEach(items, item => {
-                  DSUtils.forEach(relatedItems, relatedItem => {
-                    if (relatedItem[relationDef.idAttribute] === item[def.localKey]) {
-                      DSUtils.set(item, def.localField, relatedItem);
-                    }
-                  });
                 });
-                return relatedItems;
               });
-            }
-
-            if (task) {
-              tasks.push(task);
-            }
+              return relatedItems;
+            });
           }
-        });
-        return DSUtils.Promise.all(tasks);
-      }).then(() => items);
+
+          if (task) {
+            tasks.push(task);
+          }
+        }
+      });
+      return DSUtils.Promise.all(tasks);
+    }).then(() => items);
   }
 
   create(resourceConfig, attrs, options) {
