@@ -73,7 +73,7 @@ module.exports = function (grunt) {
         },
         module: {
           loaders: [
-            { test: /(src)(.+)\.js$/, exclude: /node_modules/, loader: 'babel-loader?blacklist=useStrict' }
+            { test: /(src)(.+)\.js$/, exclude: /node_modules/, loader: 'babel-loader' }
           ],
           preLoaders: [
             {
